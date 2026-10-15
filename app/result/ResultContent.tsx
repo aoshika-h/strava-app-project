@@ -108,58 +108,51 @@ export default function ResultContent() {
         <div className="absolute inset-0 opacity-5 bg-[repeating-linear-gradient(45deg,white_0px,white_1px,transparent_1px,transparent_24px)]" />
         <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-[#0A0A0F] to-transparent" />
 
-        <div className="relative max-w-2xl mx-auto px-6 pt-10 pb-20">
+        <div className="relative max-w-2xl mx-auto px-6 pt-10 pb-10 text-center">
           {/* アスリート名 + 肩書き */}
-          <div className="text-center mb-2">
-            <p className="text-white/50 text-xs tracking-widest uppercase mb-2">{result.athleteName}</p>
-            <div
-              className="inline-block text-xs font-black tracking-widest uppercase px-3 py-1 rounded-full border"
-              style={{ borderColor: `${character.accentColor}70`, color: character.accentColor, backgroundColor: `${character.accentColor}18` }}
-            >
-              {character.title}
-            </div>
+          <p className="text-white/50 text-xs tracking-widest uppercase mb-2">{result.athleteName}</p>
+          <div
+            className="inline-block text-xs font-black tracking-widest uppercase px-3 py-1 rounded-full border mb-6"
+            style={{ borderColor: `${character.accentColor}70`, color: character.accentColor, backgroundColor: `${character.accentColor}18` }}
+          >
+            {character.title}
           </div>
 
-          {/* SVGキャラクターイラスト + テキストを左右に配置 */}
-          <div className="flex items-center gap-4 mt-4">
-            {/* SVGイラスト */}
-            <div className="flex-shrink-0 w-44 h-56 md:w-52 md:h-64">
-              <CharacterIllustration
-                characterId={result.characterId}
-                accentColor={character.accentColor}
-              />
-            </div>
+          {/* キャラクター画像：中央大表示 */}
+          <div className="relative w-64 h-64 md:w-80 md:h-80 mx-auto mb-6">
+            <CharacterIllustration
+              characterId={result.characterId}
+              accentColor={character.accentColor}
+            />
+          </div>
 
-            {/* テキスト情報 */}
-            <div className="flex-1 min-w-0">
-              <p className="text-white/40 text-xs mb-1">CHARACTER</p>
-              <h1 className="text-2xl md:text-3xl font-black leading-tight mb-3 drop-shadow-lg">
-                {character.name}
-              </h1>
+          {/* キャラクター名 */}
+          <p className="text-white/40 text-xs tracking-widest mb-1">CHARACTER</p>
+          <h1 className="text-4xl md:text-5xl font-black leading-tight mb-4 drop-shadow-lg">
+            {character.name}
+          </h1>
 
-              {/* キャッチコピー（セリフ風） */}
-              <div
-                className="rounded-xl px-4 py-3 text-sm italic font-medium leading-relaxed border"
-                style={{
-                  borderColor: `${character.accentColor}40`,
-                  backgroundColor: `${character.accentColor}12`,
-                  color: `${character.accentColor}`,
-                }}
-              >
-                {character.catchphrase}
-              </div>
+          {/* キャッチコピー */}
+          <div
+            className="inline-block rounded-xl px-5 py-3 text-base italic font-medium border mb-3"
+            style={{
+              borderColor: `${character.accentColor}40`,
+              backgroundColor: `${character.accentColor}12`,
+              color: character.accentColor,
+            }}
+          >
+            {character.catchphrase}
+          </div>
 
-              {/* 必殺技（コンパクト） */}
-              <div className="mt-3 text-xs font-black tracking-wider" style={{ color: character.accentColor }}>
-                {character.specialMove}
-              </div>
-            </div>
+          {/* 必殺技 */}
+          <div className="text-sm font-black tracking-wider" style={{ color: character.accentColor }}>
+            {character.specialMove}
           </div>
         </div>
       </div>
 
       {/* ========== コンテンツエリア ========== */}
-      <div className="max-w-2xl mx-auto px-6 -mt-8 pb-16 space-y-6">
+      <div className="max-w-2xl mx-auto px-6 pt-2 pb-16 space-y-6">
 
         {/* キャラクター説明 */}
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
