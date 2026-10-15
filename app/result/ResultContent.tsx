@@ -5,6 +5,7 @@
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { CHARACTERS, type AnalysisResult } from '@/lib/character'
+import CharacterIllustration from './CharacterIllustration'
 
 // ---- レーダーチャートコンポーネント ----
 function RadarChart({ scores, color }: { scores: AnalysisResult['scores']; color: string }) {
@@ -97,54 +98,68 @@ export default function ResultContent() {
     <main className="min-h-screen bg-[#0A0A0F] text-white">
 
       {/* ========== キャラクター登場ヘッダー ========== */}
-      <div className={`relative overflow-hidden bg-gradient-to-br ${character.colorClass}`}>
-        {/* 背景装飾 */}
-        <div className="absolute inset-0 opacity-10 bg-[repeating-linear-gradient(45deg,white_0px,white_1px,transparent_1px,transparent_20px)]" />
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#0A0A0F] to-transparent" />
+      <div className="relative overflow-hidden bg-[#0d0d14]">
+        {/* 背景グロー */}
+        <div
+          className="absolute inset-0 opacity-20"
+          style={{ background: `radial-gradient(ellipse at 50% 80%, ${character.accentColor} 0%, transparent 70%)` }}
+        />
+        {/* ストライプ装飾 */}
+        <div className="absolute inset-0 opacity-5 bg-[repeating-linear-gradient(45deg,white_0px,white_1px,transparent_1px,transparent_24px)]" />
+        <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-[#0A0A0F] to-transparent" />
 
-        <div className="relative max-w-2xl mx-auto px-6 pt-14 pb-24 text-center">
-          {/* アスリート名 */}
-          <p className="text-white/60 text-sm mb-3 tracking-widest uppercase">
-            {result.athleteName}
-          </p>
-
-          {/* 肩書き */}
-          <div
-            className="inline-block text-xs font-bold tracking-widest uppercase px-3 py-1 rounded-full mb-4 border"
-            style={{ borderColor: `${character.accentColor}80`, color: character.accentColor, backgroundColor: `${character.accentColor}20` }}
-          >
-            {character.title}
+        <div className="relative max-w-2xl mx-auto px-6 pt-10 pb-20">
+          {/* アスリート名 + 肩書き */}
+          <div className="text-center mb-2">
+            <p className="text-white/50 text-xs tracking-widest uppercase mb-2">{result.athleteName}</p>
+            <div
+              className="inline-block text-xs font-black tracking-widest uppercase px-3 py-1 rounded-full border"
+              style={{ borderColor: `${character.accentColor}70`, color: character.accentColor, backgroundColor: `${character.accentColor}18` }}
+            >
+              {character.title}
+            </div>
           </div>
 
-          {/* 絵文字 */}
-          <div className="text-9xl mb-5 drop-shadow-2xl leading-none">{character.emoji}</div>
+          {/* SVGキャラクターイラスト + テキストを左右に配置 */}
+          <div className="flex items-center gap-4 mt-4">
+            {/* SVGイラスト */}
+            <div className="flex-shrink-0 w-44 h-56 md:w-52 md:h-64">
+              <CharacterIllustration
+                characterId={result.characterId}
+                accentColor={character.accentColor}
+              />
+            </div>
 
-          {/* キャラクター名 */}
-          <h1 className="text-4xl md:text-5xl font-black mb-4 tracking-tight drop-shadow-lg">
-            {character.name}
-          </h1>
+            {/* テキスト情報 */}
+            <div className="flex-1 min-w-0">
+              <p className="text-white/40 text-xs mb-1">CHARACTER</p>
+              <h1 className="text-2xl md:text-3xl font-black leading-tight mb-3 drop-shadow-lg">
+                {character.name}
+              </h1>
 
-          {/* キャッチコピー（セリフ風） */}
-          <p className="text-lg md:text-xl text-white/80 italic font-medium">
-            {character.catchphrase}
-          </p>
+              {/* キャッチコピー（セリフ風） */}
+              <div
+                className="rounded-xl px-4 py-3 text-sm italic font-medium leading-relaxed border"
+                style={{
+                  borderColor: `${character.accentColor}40`,
+                  backgroundColor: `${character.accentColor}12`,
+                  color: `${character.accentColor}`,
+                }}
+              >
+                {character.catchphrase}
+              </div>
+
+              {/* 必殺技（コンパクト） */}
+              <div className="mt-3 text-xs font-black tracking-wider" style={{ color: character.accentColor }}>
+                {character.specialMove}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* ========== コンテンツエリア ========== */}
       <div className="max-w-2xl mx-auto px-6 -mt-8 pb-16 space-y-6">
-
-        {/* 必殺技バナー */}
-        <div
-          className="rounded-2xl px-6 py-4 text-center font-black text-lg tracking-wider border"
-          style={{
-            backgroundColor: `${character.accentColor}15`,
-            borderColor: `${character.accentColor}50`,
-            color: character.accentColor,
-          }}
-        >
-          {character.specialMove}
-        </div>
 
         {/* キャラクター説明 */}
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
