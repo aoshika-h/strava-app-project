@@ -7,11 +7,11 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Strava キャラクター診断',
-  description: 'あなたのStravaライドデータを分析して、サイクリストタイプを診断します',
+  title: 'VeloAva — あなたのサイクリストキャラクターを診断',
+  description: 'Stravaのライドデータを分析して、あなたのサイクリストアバターを診断します',
   openGraph: {
-    title: 'Strava キャラクター診断',
-    description: 'あなたのStravaライドデータを分析して、サイクリストタイプを診断します',
+    title: 'VeloAva — あなたのサイクリストキャラクターを診断',
+    description: 'Stravaのライドデータを分析して、あなたのサイクリストアバターを診断します',
     type: 'website',
   },
 }

@@ -33,10 +33,11 @@ export default function HomePage({ searchParams }: PageProps) {
           </div>
 
           <h1 className="text-5xl md:text-6xl font-black mb-6 leading-tight">
-            あなたのサイクリスト<br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">
-              タイプを診断
+              VeloAva
             </span>
+            <br />
+            あなたのサイクリスト<br />キャラクターを診断
           </h1>
 
           <p className="text-lg text-white/60 mb-12 max-w-xl mx-auto">
