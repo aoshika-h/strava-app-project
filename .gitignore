@@ -1,0 +1,21 @@
+# Next.js
+.next/
+out/
+node_modules/
+
+# 環境変数（絶対にコミットしない）
+.env
+.env.local
+.env.production
+
+# ビルド成果物
+build/
+dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# エディタ
+.vscode/
+.idea/
