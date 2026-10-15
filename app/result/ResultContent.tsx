@@ -119,7 +119,7 @@ export default function ResultContent() {
           </div>
 
           {/* キャラクター画像：中央大表示 */}
-          <div className="relative w-64 h-64 md:w-80 md:h-80 mx-auto mb-6">
+          <div className="relative w-[500px] h-[500px] max-w-full mx-auto mb-6">
             <CharacterIllustration
               characterId={result.characterId}
               accentColor={character.accentColor}
