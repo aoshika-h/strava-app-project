@@ -237,28 +237,58 @@ export function analyzeCharacter(
   }
 
   // ---- キャラクタータイプの判定 ----
-  // 優先順位付きのルールベースで判定
-  let characterId: CharacterId
+  // 各キャラクターへの適合スコアを指標ごとに積み上げ、最大値を選ぶ
+  // 人為的な優先順位を排除し、データが判定を決める
 
-  if (climbingRatio >= 15) {
-    // 獲得標高が15m/km以上 → 確実に山岳系
-    characterId = 'climber'
-  } else if (avgDistance >= 100) {
-    // 平均100km以上のライド → グランフォンド
-    characterId = 'granfondo'
-  } else if (avgSpeed >= 33 && avgDistance < 60) {
-    // 高速かつ短距離 → スプリンター
-    characterId = 'sprinter'
-  } else if (avgSpeed >= 28 && avgDistance >= 40) {
-    // 平地高速巡航 → タイムトライアリスト
-    characterId = 'tt'
-  } else if (ridesPerWeek < 1.5 && avgDistance < 50) {
-    // 頻度が低くて短い → サンデーライダー
-    characterId = 'weekend'
-  } else {
-    // それ以外 → オールラウンダー
-    characterId = 'allrounder'
+  const charScores: Record<CharacterId, number> = {
+    climber:    0,
+    sprinter:   0,
+    tt:         0,
+    granfondo:  0,
+    allrounder: 0,
+    weekend:    0,
   }
+
+  // 登坂比率 → クライマー・グランフォンドに加点
+  const climbScore = normalize(climbingRatio, 2, 30)
+  charScores.climber    += climbScore * 2.0  // 登坂はクライマーの主指標なので重み2倍
+  charScores.granfondo  += climbScore * 0.5  // グランフォンドも山を走ることがある
+
+  // 平均距離 → グランフォンド・TTに加点
+  const distScore = normalize(avgDistance, 20, 150)
+  charScores.granfondo  += distScore * 2.0   // 長距離はグランフォンドの主指標
+  charScores.tt         += distScore * 0.8
+  charScores.allrounder += distScore * 0.5
+
+  // 平均速度 → スプリンター・TTに加点
+  const speedScore = normalize(avgSpeed, 18, 42)
+  charScores.sprinter   += speedScore * 1.5
+  charScores.tt         += speedScore * 1.5  // TTは速度が主指標
+  charScores.allrounder += speedScore * 0.5
+
+  // 短距離補正: 距離が短いほどスプリンター寄り、長いほどTT・グランフォンド寄り
+  const shortBias = normalize(60 - avgDistance, -90, 60) // 距離が短いと高スコア
+  charScores.sprinter   += shortBias * 1.0
+
+  // 頻度の低さ → サンデーライダーに加点（頻度が低いほど高スコア）
+  const lowFreqScore = normalize(3 - ridesPerWeek, -4, 3)
+  charScores.weekend    += lowFreqScore * 2.0
+
+  // 頻度の高さ → オールラウンダー・TTに加点
+  const freqScore = normalize(ridesPerWeek, 0.5, 7)
+  charScores.allrounder += freqScore * 1.0
+  charScores.tt         += freqScore * 0.5
+
+  // パワー → TT・クライマーに加点（パワーメーターがある場合のみ）
+  if (avgWatts > 0) {
+    const powerScore = normalize(avgWatts, 100, 350)
+    charScores.tt      += powerScore * 1.0
+    charScores.climber += powerScore * 0.5
+  }
+
+  // 各キャラクターのスコアが最大のものを選択
+  const characterId = (Object.entries(charScores) as [CharacterId, number][])
+    .reduce((best, curr) => curr[1] > best[1] ? curr : best)[0]
 
   return buildResult(
     characterId,
