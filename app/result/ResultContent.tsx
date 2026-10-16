@@ -5,7 +5,6 @@
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { CHARACTERS, type AnalysisResult } from '@/lib/character'
-import CharacterIllustration from './CharacterIllustration'
 import ShareCard from './ShareCard'
 
 // ---- レーダーチャートコンポーネント ----
@@ -98,62 +97,11 @@ export default function ResultContent() {
   return (
     <main className="min-h-screen bg-[#0A0A0F] text-white">
 
-      {/* ========== キャラクター登場ヘッダー ========== */}
-      <div className="relative overflow-hidden bg-[#0d0d14]">
-        {/* 背景グロー */}
-        <div
-          className="absolute inset-0 opacity-20"
-          style={{ background: `radial-gradient(ellipse at 50% 80%, ${character.accentColor} 0%, transparent 70%)` }}
-        />
-        {/* ストライプ装飾 */}
-        <div className="absolute inset-0 opacity-5 bg-[repeating-linear-gradient(45deg,white_0px,white_1px,transparent_1px,transparent_24px)]" />
-        <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-[#0A0A0F] to-transparent" />
-
-        <div className="relative max-w-2xl mx-auto px-6 pt-10 pb-10 text-center">
-          {/* アスリート名 + 肩書き */}
-          <p className="text-white/50 text-xs tracking-widest uppercase mb-2">{result.athleteName}</p>
-          <div
-            className="inline-block text-xs font-black tracking-widest uppercase px-3 py-1 rounded-full border mb-6"
-            style={{ borderColor: `${character.accentColor}70`, color: character.accentColor, backgroundColor: `${character.accentColor}18` }}
-          >
-            {character.title}
-          </div>
-
-          {/* キャラクター画像：中央大表示 */}
-          <div className="relative w-[500px] h-[500px] max-w-full mx-auto mb-6">
-            <CharacterIllustration
-              characterId={result.characterId}
-              accentColor={character.accentColor}
-            />
-          </div>
-
-          {/* キャラクター名 */}
-          <p className="text-white/40 text-xs tracking-widest mb-1">CHARACTER</p>
-          <h1 className="text-4xl md:text-5xl font-black leading-tight mb-4 drop-shadow-lg">
-            {character.name}
-          </h1>
-
-          {/* キャッチコピー */}
-          <div
-            className="inline-block rounded-xl px-5 py-3 text-base italic font-medium border mb-3"
-            style={{
-              borderColor: `${character.accentColor}40`,
-              backgroundColor: `${character.accentColor}12`,
-              color: character.accentColor,
-            }}
-          >
-            {character.catchphrase}
-          </div>
-
-          {/* 必殺技 */}
-          <div className="text-sm font-black tracking-wider" style={{ color: character.accentColor }}>
-            {character.specialMove}
-          </div>
-        </div>
-      </div>
-
       {/* ========== コンテンツエリア ========== */}
-      <div className="max-w-2xl mx-auto px-6 pt-2 pb-16 space-y-6">
+      <div className="max-w-2xl mx-auto px-6 pt-8 pb-16 space-y-6">
+
+        {/* シェアカード（ページ最上部） */}
+        <ShareCard character={character} characterId={result.characterId} athleteName={result.athleteName} />
 
         {/* キャラクター説明 */}
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
@@ -257,12 +205,6 @@ export default function ResultContent() {
               </div>
             ))}
           </div>
-        </div>
-
-        {/* シェアカード保存 */}
-        <div>
-          <h2 className="text-sm font-bold text-white/40 tracking-widest uppercase mb-4">Share Card</h2>
-          <ShareCard character={character} characterId={result.characterId} />
         </div>
 
         {/* もう一度診断 */}
