@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { CHARACTERS, type AnalysisResult } from '@/lib/character'
 import CharacterIllustration from './CharacterIllustration'
+import ShareCard from './ShareCard'
 
 // ---- レーダーチャートコンポーネント ----
 function RadarChart({ scores, color }: { scores: AnalysisResult['scores']; color: string }) {
@@ -256,6 +257,12 @@ export default function ResultContent() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* シェアカード保存 */}
+        <div>
+          <h2 className="text-sm font-bold text-white/40 tracking-widest uppercase mb-4">Share Card</h2>
+          <ShareCard character={character} characterId={result.characterId} />
         </div>
 
         {/* もう一度診断 */}
