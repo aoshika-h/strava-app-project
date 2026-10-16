@@ -63,6 +63,12 @@ export async function exchangeCode(code: string): Promise<StravaTokenResponse> {
 
   if (!res.ok) {
     const text = await res.text()
+    // サンドボックスモードの50アスリート上限超過を検出
+    if (res.status === 403 || text.includes('above limit') || text.includes('athlete')) {
+      const err = new Error('athlete_limit') as Error & { code: string }
+      err.code = 'athlete_limit'
+      throw err
+    }
     throw new Error(`Stravaトークン交換失敗: ${res.status} - ${text}`)
   }
 

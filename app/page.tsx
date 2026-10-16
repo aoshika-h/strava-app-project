@@ -9,6 +9,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   access_denied: 'Stravaの連携を拒否されました。もう一度試してください。',
   no_code: '認証コードが取得できませんでした。もう一度試してください。',
   analysis_failed: 'データの分析中にエラーが発生しました。しばらくしてから再度お試しください。',
+  athlete_limit: 'アプリの利用者数が上限（50人）に達しています。現在アクセスできません。',
 }
 
 interface PageProps {

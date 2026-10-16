@@ -44,6 +44,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${BASE_URL}/result?data=${encoded}`)
   } catch (err) {
     console.error('Strava診断エラー:', err)
+    const code = (err as { code?: string }).code
+    if (code === 'athlete_limit') {
+      return NextResponse.redirect(`${BASE_URL}/?error=athlete_limit`)
+    }
     return NextResponse.redirect(`${BASE_URL}/?error=analysis_failed`)
   }
 }
