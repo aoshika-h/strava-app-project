@@ -14,26 +14,45 @@ export default function ShareCard({ character, characterId }: Props) {
   const cardRef = useRef<HTMLDivElement>(null)
   const [saving, setSaving] = useState(false)
 
-  // html2canvasでカード要素を画像化してダウンロード
+  // html2canvasでカード要素を画像化し、環境に応じて保存/共有する
   const handleSave = async () => {
     if (!cardRef.current) return
     setSaving(true)
     try {
-      // html2canvasは動的importでSSRを回避する
       const html2canvas = (await import('html2canvas')).default
       const canvas = await html2canvas(cardRef.current, {
-        backgroundColor: null,  // 透過背景を維持
-        scale: 2,               // 2倍解像度で高品質に
+        backgroundColor: '#0d0d18',
+        scale: 2,
         useCORS: true,
         logging: false,
       })
-      // canvasをPNG画像としてダウンロード
+
+      const filename = `veloava-${characterId}.png`
+
+      // iOS/Androidなど: Web Share APIで共有シートを表示
+      // → 「写真に保存」「LINEで送る」などが選べる
+      if (navigator.share) {
+        const blob = await new Promise<Blob>((resolve) =>
+          canvas.toBlob((b) => resolve(b!), 'image/png')
+        )
+        const file = new File([blob], filename, { type: 'image/png' })
+        await navigator.share({
+          files: [file],
+          title: 'VeloAva キャラクター診断',
+        })
+        return
+      }
+
+      // デスクトップ: 通常のダウンロード
       const link = document.createElement('a')
-      link.download = `veloava-${characterId}.png`
+      link.download = filename
       link.href = canvas.toDataURL('image/png')
       link.click()
     } catch (e) {
-      console.error('画像保存エラー:', e)
+      // 共有キャンセル時などは無視
+      if (e instanceof Error && e.name !== 'AbortError') {
+        console.error('画像保存エラー:', e)
+      }
     } finally {
       setSaving(false)
     }
@@ -150,7 +169,7 @@ export default function ShareCard({ character, characterId }: Props) {
             cursor: saving ? 'wait' : 'pointer',
           }}
         >
-          {saving ? '⏳ 保存中...' : '💾 画像を保存'}
+          {saving ? '⏳ 処理中...' : '📲 画像を保存・シェア'}
         </button>
       </div>
     </div>
