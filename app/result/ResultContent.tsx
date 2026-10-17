@@ -4,7 +4,7 @@
 
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { CHARACTERS, type AnalysisResult, type CharacterId } from '@/lib/character'
+import { CHARACTERS, getGenderText, type AnalysisResult, type CharacterId } from '@/lib/character'
 import ShareCard from './ShareCard'
 
 const CHARACTER_IDS: CharacterId[] = ['climber', 'sprinter', 'tt', 'granfondo', 'allrounder', 'weekend']
@@ -91,8 +91,8 @@ export default function ResultContent() {
   const previewParam = searchParams.get('preview') as CharacterId | null
   const sexParam = searchParams.get('sex') === 'female' ? 'female' : 'male'
 
-  // ?preview=climber&sex=female でテスト表示
-  if (!dataParam && previewParam && CHARACTER_IDS.includes(previewParam)) {
+  // ?preview=climber&sex=female でテスト表示（dataパラメータより優先）
+  if (previewParam && CHARACTER_IDS.includes(previewParam)) {
     const result = buildPreviewResult(previewParam, sexParam)
     const character = CHARACTERS[result.characterId]
     const { stats, scores } = result
@@ -143,6 +143,8 @@ function ResultView({
   scores: AnalysisResult['scores']
   isPreview?: boolean
 }) {
+  const genderText = getGenderText(character, result.sex)
+
   return (
     <main className="min-h-screen bg-[#0A0A0F] text-white">
 
@@ -161,9 +163,9 @@ function ResultView({
 
         {/* キャラクター説明 */}
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-          <p className="text-white/80 leading-relaxed mb-4">{character.description}</p>
+          <p className="text-white/80 leading-relaxed mb-4">{genderText.description}</p>
           <p className="text-sm text-white/40 leading-relaxed border-t border-white/10 pt-4">
-            📖 {character.lore}
+            📖 {genderText.lore}
           </p>
         </div>
 
