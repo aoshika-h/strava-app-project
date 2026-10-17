@@ -4,8 +4,31 @@
 
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { CHARACTERS, type AnalysisResult } from '@/lib/character'
+import { CHARACTERS, type AnalysisResult, type CharacterId } from '@/lib/character'
 import ShareCard from './ShareCard'
+
+const CHARACTER_IDS: CharacterId[] = ['climber', 'sprinter', 'tt', 'granfondo', 'allrounder', 'weekend']
+
+function buildPreviewResult(characterId: CharacterId, sex: 'male' | 'female'): AnalysisResult {
+  return {
+    characterId,
+    athleteName: 'テストライダー',
+    profileImageUrl: '',
+    sex,
+    stats: {
+      totalRides: 42,
+      avgDistanceKm: 65.0,
+      totalDistanceKm: 2730,
+      totalElevationM: 18500,
+      avgSpeedKmh: 28.5,
+      climbingRatioMPerKm: 6.8,
+      ridesPerWeek: 3.5,
+      avgWatts: 210,
+      periodDays: 90,
+    },
+    scores: { climbing: 75, speed: 68, endurance: 80, power: 65, consistency: 72 },
+  }
+}
 
 // ---- レーダーチャートコンポーネント ----
 function RadarChart({ scores, color }: { scores: AnalysisResult['scores']; color: string }) {
@@ -65,6 +88,16 @@ function RadarChart({ scores, color }: { scores: AnalysisResult['scores']; color
 export default function ResultContent() {
   const searchParams = useSearchParams()
   const dataParam = searchParams.get('data')
+  const previewParam = searchParams.get('preview') as CharacterId | null
+  const sexParam = searchParams.get('sex') === 'female' ? 'female' : 'male'
+
+  // ?preview=climber&sex=female でテスト表示
+  if (!dataParam && previewParam && CHARACTER_IDS.includes(previewParam)) {
+    const result = buildPreviewResult(previewParam, sexParam)
+    const character = CHARACTERS[result.characterId]
+    const { stats, scores } = result
+    return <ResultView result={result} character={character} stats={stats} scores={scores} isPreview />
+  }
 
   if (!dataParam) {
     return (
@@ -93,10 +126,32 @@ export default function ResultContent() {
 
   const character = CHARACTERS[result.characterId]
   const { stats, scores } = result
-  const imageSuffix = result.sex === 'female' ? '_female' : '_male'
+  return <ResultView result={result} character={character} stats={stats} scores={scores} />
+}
 
+// ---- 結果表示ビュー（プレビュー・本番共用） ----
+function ResultView({
+  result,
+  character,
+  stats,
+  scores,
+  isPreview = false,
+}: {
+  result: AnalysisResult
+  character: (typeof CHARACTERS)[keyof typeof CHARACTERS]
+  stats: AnalysisResult['stats']
+  scores: AnalysisResult['scores']
+  isPreview?: boolean
+}) {
   return (
     <main className="min-h-screen bg-[#0A0A0F] text-white">
+
+      {/* プレビューバナー */}
+      {isPreview && (
+        <div className="bg-yellow-500/20 border-b border-yellow-500/30 text-yellow-400 text-xs text-center py-2 tracking-widest">
+          ⚡ PREVIEW MODE — テスト表示中
+        </div>
+      )}
 
       {/* ========== コンテンツエリア ========== */}
       <div className="max-w-2xl mx-auto px-6 pt-8 pb-16 space-y-6">
