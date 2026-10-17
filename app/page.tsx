@@ -108,7 +108,7 @@ export default function HomePage({ searchParams }: PageProps) {
                   style={{ background: `radial-gradient(circle at 50% 60%, ${c.color}, transparent 70%)` }}
                 />
                 <Image
-                  src={`/characters/${c.id}.png`}
+                  src={`/characters/${c.id}_male.png`}
                   alt={c.name}
                   fill
                   className="object-cover object-top group-hover:scale-105 transition-transform duration-300"

@@ -32,6 +32,7 @@ export interface StravaAthlete {
   lastname: string
   username: string
   profile: string       // プロフィール画像URL
+  sex?: 'M' | 'F'      // 性別（設定している場合）
   city?: string
   country?: string
   weight?: number       // kg（設定している場合）
