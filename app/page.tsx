@@ -2,6 +2,7 @@
 // Strava連携ボタンとアプリの説明を表示するトップページ
 
 import Link from 'next/link'
+import Image from 'next/image'
 
 // URLパラメータのエラーメッセージマッピング
 const ERROR_MESSAGES: Record<string, string> = {
@@ -77,20 +78,35 @@ export default function HomePage({ searchParams }: PageProps) {
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {[
-            { emoji: '🏔️', name: 'クライマー', desc: '山岳の覇者' },
-            { emoji: '⚡', name: 'スプリンター', desc: '瞬速の稲妻' },
-            { emoji: '⏱️', name: 'タイムトライアリスト', desc: '鉄の持続力' },
-            { emoji: '🌄', name: 'グランフォンド', desc: '地平線の果てまで' },
-            { emoji: '🎯', name: 'オールラウンダー', desc: '万能の勇者' },
-            { emoji: '☀️', name: 'サンデーライダー', desc: '週末の自由人' },
+            { id: 'climber',    name: 'クライマー',          desc: '山岳の覇者',      color: '#10B981' },
+            { id: 'sprinter',   name: 'スプリンター',        desc: '瞬速の稲妻',      color: '#F59E0B' },
+            { id: 'tt',         name: 'タイムトライアリスト', desc: '鉄の持続力',      color: '#3B82F6' },
+            { id: 'granfondo',  name: 'グランフォンド',      desc: '地平線の果てまで', color: '#8B5CF6' },
+            { id: 'allrounder', name: 'オールラウンダー',    desc: '万能の勇者',      color: '#FC4C02' },
+            { id: 'weekend',    name: 'サンデーライダー',    desc: '週末の自由人',    color: '#EC4899' },
           ].map((c) => (
             <div
-              key={c.name}
-              className="bg-white/5 border border-white/10 rounded-2xl p-5 text-center hover:bg-white/8 transition-colors"
+              key={c.id}
+              className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:bg-white/8 transition-colors group"
             >
-              <div className="text-4xl mb-2">{c.emoji}</div>
-              <div className="font-bold text-sm">{c.name}</div>
-              <div className="text-xs text-white/40 mt-1">{c.desc}</div>
+              {/* 顔部分のクロップ表示 */}
+              <div className="relative h-36 overflow-hidden">
+                <div
+                  className="absolute inset-0 opacity-25"
+                  style={{ background: `radial-gradient(circle at 50% 60%, ${c.color}, transparent 70%)` }}
+                />
+                <Image
+                  src={`/characters/${c.id}.png`}
+                  alt={c.name}
+                  fill
+                  className="object-cover object-top group-hover:scale-105 transition-transform duration-300"
+                />
+              </div>
+              {/* キャラ名 */}
+              <div className="px-4 py-3 text-center">
+                <div className="font-bold text-sm">{c.name}</div>
+                <div className="text-xs mt-0.5" style={{ color: c.color }}>{c.desc}</div>
+              </div>
             </div>
           ))}
         </div>
