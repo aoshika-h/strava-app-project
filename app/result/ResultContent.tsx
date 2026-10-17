@@ -2,10 +2,120 @@
 // 結果表示クライアントコンポーネント
 // キャラクターカード風のUIで診断結果を表示する
 
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { CHARACTERS, type AnalysisResult, type CharacterId } from '@/lib/character'
 import ShareCard from './ShareCard'
+
+// ---- localStorage保存型 ----
+interface StoredResult {
+  characterId: CharacterId
+  scores: AnalysisResult['scores']
+  date: string // ISO文字列
+}
+
+const STORAGE_KEY = 'veloava_last_result'
+
+function loadStored(): StoredResult | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    return raw ? (JSON.parse(raw) as StoredResult) : null
+  } catch {
+    return null
+  }
+}
+
+function saveStored(result: AnalysisResult) {
+  try {
+    const data: StoredResult = {
+      characterId: result.characterId,
+      scores: result.scores,
+      date: new Date().toISOString(),
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+  } catch {
+    // ストレージ書き込み失敗は無視
+  }
+}
+
+function formatDate(iso: string): string {
+  const d = new Date(iso)
+  return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`
+}
+
+// ---- キャラクター変化カード ----
+function EvolutionCard({ prev, current }: { prev: StoredResult; current: AnalysisResult }) {
+  const prevChar = CHARACTERS[prev.characterId]
+  const currChar = CHARACTERS[current.characterId]
+  const changed = prev.characterId !== current.characterId
+
+  const scoreKeys: { label: string; key: keyof AnalysisResult['scores'] }[] = [
+    { label: '登坂力', key: 'climbing' },
+    { label: 'スピード', key: 'speed' },
+    { label: '持久力', key: 'endurance' },
+    { label: '出力', key: 'power' },
+    { label: '継続性', key: 'consistency' },
+  ]
+
+  return (
+    <div>
+      <h2 className="text-sm font-bold text-white/40 tracking-widest uppercase mb-3">Character Evolution</h2>
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+
+        {/* キャラクター変化 */}
+        <div className="flex items-center justify-center gap-3 mb-5">
+          {changed ? (
+            <>
+              <div className="text-center">
+                <div className="text-2xl mb-1">{prevChar.emoji}</div>
+                <div className="text-xs text-white/40 font-bold">{prevChar.name}</div>
+              </div>
+              <div className="text-white/30 text-lg font-thin">→</div>
+              <div className="text-center">
+                <div className="text-2xl mb-1">{currChar.emoji}</div>
+                <div className="text-xs font-bold" style={{ color: currChar.accentColor }}>{currChar.name}</div>
+              </div>
+              <div
+                className="ml-2 text-xs font-black px-2.5 py-1 rounded-full"
+                style={{ backgroundColor: `${currChar.accentColor}25`, color: currChar.accentColor }}
+              >
+                進化！
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-2xl">{currChar.emoji}</div>
+              <div className="text-sm font-bold" style={{ color: currChar.accentColor }}>
+                {currChar.name} を維持中
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* スコア差分 */}
+        <div className="grid grid-cols-5 gap-2">
+          {scoreKeys.map(({ label, key }) => {
+            const diff = current.scores[key] - prev.scores[key]
+            const color = diff > 0 ? '#34D399' : diff < 0 ? '#F87171' : 'rgba(255,255,255,0.3)'
+            return (
+              <div key={key} className="text-center">
+                <div className="text-xs text-white/40 mb-1">{label}</div>
+                <div className="text-sm font-black" style={{ color }}>
+                  {diff > 0 ? `+${diff}` : diff === 0 ? '±0' : diff}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="text-center mt-4 text-xs text-white/20">
+          前回の診断: {formatDate(prev.date)}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const CHARACTER_IDS: CharacterId[] = ['climber', 'sprinter', 'tt', 'granfondo', 'allrounder', 'weekend']
 
@@ -143,6 +253,16 @@ function ResultView({
   scores: AnalysisResult['scores']
   isPreview?: boolean
 }) {
+  const [prevResult, setPrevResult] = useState<StoredResult | null>(null)
+
+  useEffect(() => {
+    if (isPreview) return
+    const stored = loadStored()
+    setPrevResult(stored)
+    saveStored(result)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   return (
     <main className="min-h-screen bg-[#0A0A0F] text-white">
 
@@ -158,6 +278,9 @@ function ResultView({
 
         {/* シェアカード（ページ最上部） */}
         <ShareCard character={character} characterId={result.characterId} athleteName={result.athleteName} sex={result.sex} personalityComment={result.personalityComment} />
+
+        {/* キャラクター変化（前回診断がある場合のみ表示） */}
+        {prevResult && <EvolutionCard prev={prevResult} current={result} />}
 
         {/* ライド統計 */}
         <div>
