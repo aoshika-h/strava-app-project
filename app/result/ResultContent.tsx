@@ -91,8 +91,8 @@ export default function ResultContent() {
   const previewParam = searchParams.get('preview') as CharacterId | null
   const sexParam = searchParams.get('sex') === 'female' ? 'female' : 'male'
 
-  // ?preview=climber&sex=female でテスト表示
-  if (!dataParam && previewParam && CHARACTER_IDS.includes(previewParam)) {
+  // ?preview=climber&sex=female でテスト表示（dataパラメータより優先）
+  if (previewParam && CHARACTER_IDS.includes(previewParam)) {
     const result = buildPreviewResult(previewParam, sexParam)
     const character = CHARACTERS[result.characterId]
     const { stats, scores } = result
