@@ -157,7 +157,7 @@ function ResultView({
       <div className="max-w-2xl mx-auto px-6 pt-8 pb-16 space-y-6">
 
         {/* シェアカード（ページ最上部） */}
-        <ShareCard character={character} characterId={result.characterId} athleteName={result.athleteName} sex={result.sex} />
+        <ShareCard character={character} characterId={result.characterId} athleteName={result.athleteName} sex={result.sex} personalityComment={result.personalityComment} />
 
         {/* ライド統計 */}
         <div>

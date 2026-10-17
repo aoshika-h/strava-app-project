@@ -243,6 +243,7 @@ export interface AnalysisResult {
     power: number        // 出力 0-100
     consistency: number  // 継続性 0-100
   }
+  personalityComment?: string | null  // Claude APIによる性格コメント（取得できなければnull）
 }
 
 // 値を0〜100の範囲に正規化するヘルパー

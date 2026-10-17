@@ -23,6 +23,7 @@ export interface StravaActivity {
   start_date: string    // ISO 8601形式
   suffer_score?: number  // Stravaの運動負荷スコア
   kilojoules?: number   // 消費エネルギー
+  description?: string  // アクティビティの説明文（ユーザーが記入するメモ）
 }
 
 // アスリートプロフィール型

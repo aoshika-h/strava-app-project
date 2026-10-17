@@ -11,9 +11,10 @@ interface Props {
   characterId: CharacterId
   athleteName: string
   sex: 'male' | 'female'
+  personalityComment?: string | null
 }
 
-export default function ShareCard({ character, characterId, athleteName, sex }: Props) {
+export default function ShareCard({ character, characterId, athleteName, sex, personalityComment }: Props) {
   const imageSrc = `/characters/${characterId}_${sex}.png`
   const genderText = getGenderText(character, sex)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -184,29 +185,45 @@ export default function ShareCard({ character, characterId, athleteName, sex }: 
             {genderText.catchphrase}
           </div>
 
-          {/* キャラクター説明 */}
-          <div style={{
-            fontSize: '11px',
-            color: 'rgba(255,255,255,0.65)',
-            lineHeight: 1.7,
-            textAlign: 'left',
-            marginBottom: '10px',
-          }}>
-            {genderText.description}
-          </div>
-
-          {/* 背景ストーリー */}
-          <div style={{
-            fontSize: '10px',
-            color: 'rgba(255,255,255,0.35)',
-            lineHeight: 1.6,
-            textAlign: 'left',
-            borderTop: '1px solid rgba(255,255,255,0.08)',
-            paddingTop: '10px',
-            marginBottom: '14px',
-          }}>
-            📖 {genderText.lore}
-          </div>
+          {/* キャラクター説明 / AIコメント */}
+          {personalityComment ? (
+            <div style={{
+              fontSize: '11px',
+              color: 'rgba(255,255,255,0.75)',
+              lineHeight: 1.7,
+              textAlign: 'left',
+              background: `${character.accentColor}18`,
+              border: `1px solid ${character.accentColor}40`,
+              borderRadius: '10px',
+              padding: '10px 12px',
+              marginBottom: '14px',
+            }}>
+              ✨ {personalityComment}
+            </div>
+          ) : (
+            <>
+              <div style={{
+                fontSize: '11px',
+                color: 'rgba(255,255,255,0.65)',
+                lineHeight: 1.7,
+                textAlign: 'left',
+                marginBottom: '10px',
+              }}>
+                {genderText.description}
+              </div>
+              <div style={{
+                fontSize: '10px',
+                color: 'rgba(255,255,255,0.35)',
+                lineHeight: 1.6,
+                textAlign: 'left',
+                borderTop: '1px solid rgba(255,255,255,0.08)',
+                paddingTop: '10px',
+                marginBottom: '14px',
+              }}>
+                📖 {genderText.lore}
+              </div>
+            </>
+          )}
 
           {/* フッター: VeloAvaロゴ */}
           <div style={{
