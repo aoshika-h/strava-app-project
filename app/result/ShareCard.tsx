@@ -18,6 +18,7 @@ export default function ShareCard({ character, characterId, athleteName, sex }: 
   const genderText = getGenderText(character, sex)
   const cardRef = useRef<HTMLDivElement>(null)
   const [saving, setSaving] = useState(false)
+  const isMobileDevice = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0
 
   const handleSave = async () => {
     if (!cardRef.current) return
@@ -33,8 +34,9 @@ export default function ShareCard({ character, characterId, athleteName, sex }: 
 
       const filename = `veloava-${characterId}.png`
 
-      // iOS/Android: Web Share APIでネイティブ共有シートを表示
-      if (navigator.share) {
+      // タッチデバイス（SP/タブレット）: Web Share APIでネイティブ共有シートを表示
+      const isMobile = navigator.maxTouchPoints > 0
+      if (isMobile && navigator.share) {
         const blob = await new Promise<Blob>((resolve) =>
           canvas.toBlob((b) => resolve(b!), 'image/png')
         )
@@ -80,7 +82,7 @@ export default function ShareCard({ character, characterId, athleteName, sex }: 
             boxShadow: `0 4px 24px ${character.accentColor}55`,
           }}
         >
-          {saving ? '⏳ 処理中...' : '📲 この画像を保存・シェア'}
+          {saving ? '⏳ 処理中...' : isMobileDevice ? '📲 保存・シェア' : '💾 画像をダウンロード'}
         </button>
       </div>
 
@@ -180,6 +182,30 @@ export default function ShareCard({ character, characterId, athleteName, sex }: 
             marginBottom: '18px',
           }}>
             {genderText.catchphrase}
+          </div>
+
+          {/* キャラクター説明 */}
+          <div style={{
+            fontSize: '11px',
+            color: 'rgba(255,255,255,0.65)',
+            lineHeight: 1.7,
+            textAlign: 'left',
+            marginBottom: '10px',
+          }}>
+            {genderText.description}
+          </div>
+
+          {/* 背景ストーリー */}
+          <div style={{
+            fontSize: '10px',
+            color: 'rgba(255,255,255,0.35)',
+            lineHeight: 1.6,
+            textAlign: 'left',
+            borderTop: '1px solid rgba(255,255,255,0.08)',
+            paddingTop: '10px',
+            marginBottom: '14px',
+          }}>
+            📖 {genderText.lore}
           </div>
 
           {/* フッター: VeloAvaロゴ */}
