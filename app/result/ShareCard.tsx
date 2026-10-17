@@ -10,9 +10,11 @@ interface Props {
   character: CharacterType
   characterId: CharacterId
   athleteName: string
+  sex: 'male' | 'female'
 }
 
-export default function ShareCard({ character, characterId, athleteName }: Props) {
+export default function ShareCard({ character, characterId, athleteName, sex }: Props) {
+  const imageSrc = `/characters/${characterId}_${sex}.png`
   const cardRef = useRef<HTMLDivElement>(null)
   const [saving, setSaving] = useState(false)
 
@@ -113,7 +115,7 @@ export default function ShareCard({ character, characterId, athleteName }: Props
         {/* キャラクター画像 */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={`/characters/${characterId}.png`}
+          src={imageSrc}
           alt={character.name}
           crossOrigin="anonymous"
           style={{ width: '100%', display: 'block', position: 'relative' }}

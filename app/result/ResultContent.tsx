@@ -93,6 +93,7 @@ export default function ResultContent() {
 
   const character = CHARACTERS[result.characterId]
   const { stats, scores } = result
+  const imageSuffix = result.sex === 'female' ? '_female' : '_male'
 
   return (
     <main className="min-h-screen bg-[#0A0A0F] text-white">
@@ -101,7 +102,7 @@ export default function ResultContent() {
       <div className="max-w-2xl mx-auto px-6 pt-8 pb-16 space-y-6">
 
         {/* シェアカード（ページ最上部） */}
-        <ShareCard character={character} characterId={result.characterId} athleteName={result.athleteName} />
+        <ShareCard character={character} characterId={result.characterId} athleteName={result.athleteName} sex={result.sex} />
 
         {/* キャラクター説明 */}
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6">

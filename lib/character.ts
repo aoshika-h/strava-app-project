@@ -152,6 +152,7 @@ export interface AnalysisResult {
   characterId: CharacterId
   athleteName: string
   profileImageUrl: string
+  sex: 'male' | 'female'
   stats: {
     totalRides: number          // 期間内のライド数
     avgDistanceKm: number       // 平均ライド距離 (km)
@@ -320,6 +321,7 @@ function buildResult(
     characterId,
     athleteName: `${athlete.firstname} ${athlete.lastname}`.trim() || athlete.username || '名無しライダー',
     profileImageUrl: athlete.profile || '',
+    sex: athlete.sex === 'F' ? 'female' : 'male',
     stats: {
       totalRides: 0,
       avgDistanceKm: 0,
