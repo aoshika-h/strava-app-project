@@ -4,7 +4,7 @@
 // このコンポーネントがページ最上部に配置され、ヒーローセクションを兼ねる
 
 import { useRef, useState } from 'react'
-import type { CharacterId, CharacterType } from '@/lib/character'
+import { getGenderText, type CharacterId, type CharacterType } from '@/lib/character'
 
 interface Props {
   character: CharacterType
@@ -15,6 +15,7 @@ interface Props {
 
 export default function ShareCard({ character, characterId, athleteName, sex }: Props) {
   const imageSrc = `/characters/${characterId}_${sex}.png`
+  const genderText = getGenderText(character, sex)
   const cardRef = useRef<HTMLDivElement>(null)
   const [saving, setSaving] = useState(false)
 
@@ -116,7 +117,7 @@ export default function ShareCard({ character, characterId, athleteName, sex }: 
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={imageSrc}
-          alt={character.name}
+          alt={genderText.name}
           crossOrigin="anonymous"
           style={{ width: '100%', display: 'block', position: 'relative' }}
         />
@@ -141,7 +142,7 @@ export default function ShareCard({ character, characterId, athleteName, sex }: 
             padding: '4px 12px',
             marginBottom: '10px',
           }}>
-            {character.title}
+            {genderText.title}
           </div>
 
           {/* キャラクター名 */}
@@ -152,7 +153,7 @@ export default function ShareCard({ character, characterId, athleteName, sex }: 
             lineHeight: 1.2,
             marginBottom: '10px',
           }}>
-            {character.name}
+            {genderText.name}
           </div>
 
           {/* 必殺技 */}
@@ -163,7 +164,7 @@ export default function ShareCard({ character, characterId, athleteName, sex }: 
             letterSpacing: '1px',
             marginBottom: '14px',
           }}>
-            {character.specialMove}
+            {genderText.specialMove}
           </div>
 
           {/* セリフ */}
@@ -178,7 +179,7 @@ export default function ShareCard({ character, characterId, athleteName, sex }: 
             lineHeight: 1.7,
             marginBottom: '18px',
           }}>
-            {character.catchphrase}
+            {genderText.catchphrase}
           </div>
 
           {/* フッター: VeloAvaロゴ */}

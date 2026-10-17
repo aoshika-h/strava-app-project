@@ -6,10 +6,20 @@ import type { StravaActivity, StravaAthlete } from './strava'
 // キャラクタータイプの定義
 export type CharacterId = 'climber' | 'sprinter' | 'tt' | 'granfondo' | 'allrounder' | 'weekend'
 
+// 性別ごとに差し替えるテキストフィールド
+export interface GenderVariant {
+  name: string
+  title: string
+  catchphrase: string
+  specialMove: string
+  description: string
+  lore: string
+}
+
 // キャラクター型定義（必殺技・キャッチコピー付き）
 export interface CharacterType {
   id: CharacterId
-  name: string           // キャラクター名
+  name: string           // キャラクター名（男性デフォルト）
   title: string          // 肩書き
   emoji: string
   catchphrase: string    // キャッチコピー（セリフ風）
@@ -21,6 +31,20 @@ export interface CharacterType {
   colorClass: string
   accentColor: string
   bgClass: string
+  female: GenderVariant  // 女性版テキスト
+}
+
+// 性別に応じたテキストを返すヘルパー
+export function getGenderText(character: CharacterType, sex: 'male' | 'female'): GenderVariant {
+  if (sex === 'female') return character.female
+  return {
+    name: character.name,
+    title: character.title,
+    catchphrase: character.catchphrase,
+    specialMove: character.specialMove,
+    description: character.description,
+    lore: character.lore,
+  }
 }
 
 // 6種類のキャラクター定義
@@ -41,6 +65,14 @@ export const CHARACTERS: Record<CharacterId, CharacterType> = {
       'ゾーン5強度の短時間インターバルでVO2maxを鍛えましょう',
       '平地でのペーシングを覚えると、山岳レースでより有利になります',
     ],
+    female: {
+      name: 'アルピナ・クロス',
+      title: '峰の女王',
+      catchphrase: '「この坂、私のためにあるような気がする」',
+      specialMove: '⚔️ ヴァーティカル・ブルーム',
+      description: '急斜面になるほど笑顔が増す山岳の女神。軽量な体と驚異的なVO2maxで、男たちが喘ぐ激坂を優雅に駆け上がる。「山が好き」——その純粋さが最強の武器。',
+      lore: '高校時代にヒルクライムレースと出会い開花。「頂上に着くたびに、また来たくなる」が口癖。',
+    },
     colorClass: 'from-emerald-600 to-teal-500',
     accentColor: '#10B981',
     bgClass: 'bg-emerald-900/30',
@@ -61,6 +93,14 @@ export const CHARACTERS: Record<CharacterId, CharacterType> = {
       'スプリント後の素早い心拍回復も重要なトレーニングです',
       '集団走行でのポジショニングを練習して最後の位置取りを磨きましょう',
     ],
+    female: {
+      name: 'フラッシュ・レイ',
+      title: '閃光の女神',
+      catchphrase: '「ラスト100m、そこが私の舞台」',
+      specialMove: '⚔️ ライトニング・フィニッシュ',
+      description: '集団の中で息を潜め、残り100mで弾け飛ぶ爆発力の化身。周りが気づいた時には、もうゴールラインを切っている。その瞬発力は天性のもの。',
+      lore: '短距離陸上の選手だったが、自転車との出会いで才能が開花。「加速の瞬間だけ、時間が止まる」と語る。',
+    },
     colorClass: 'from-amber-500 to-orange-500',
     accentColor: '#F59E0B',
     bgClass: 'bg-amber-900/30',
@@ -81,6 +121,14 @@ export const CHARACTERS: Record<CharacterId, CharacterType> = {
       'スウィートスポット（FTPの88〜93%）でのロングインターバルが効果的です',
       '有酸素ベース走行距離を増やして心臓を強化しましょう',
     ],
+    female: {
+      name: 'アイアン・エクリプス',
+      title: '精密機械の女王',
+      catchphrase: '「感情はいらない。データだけが私の友達」',
+      specialMove: '⚔️ クロノ・シャドウ',
+      description: '高出力を一定に維持し続ける走るコンピュータ。無表情でペダルを踏む姿は美しくも恐ろしい。風も坂も、計算された出力でねじ伏せる。',
+      lore: '理系大学院出身。パワーメーターのデータを眺めるのが趣味で、「感情より数字」が信条。',
+    },
     colorClass: 'from-blue-600 to-cyan-500',
     accentColor: '#3B82F6',
     bgClass: 'bg-blue-900/30',
@@ -101,6 +149,14 @@ export const CHARACTERS: Record<CharacterId, CharacterType> = {
       'ゾーン2の3〜5時間ロングライドで有酸素基礎を固めましょう',
       '睡眠・栄養・リカバリーを三位一体で管理することが最重要です',
     ],
+    female: {
+      name: 'グランデ・セラ',
+      title: '大地の旅人',
+      catchphrase: '「まだ走れる。もう少しだけ、もう少しだけ」',
+      specialMove: '⚔️ エンドレス・ホライズン',
+      description: '距離を語るのに単位がいらない——そんな規格外のスタミナを持つ長距離の使者。疲れ知らずの笑顔で何百kmでも走り続け、その背中が仲間の希望になる。',
+      lore: 'バックパッカーだった旅好きが自転車に出会い開花。「自転車は最高の旅道具」が持論。',
+    },
     colorClass: 'from-purple-600 to-violet-500',
     accentColor: '#8B5CF6',
     bgClass: 'bg-purple-900/30',
@@ -121,6 +177,14 @@ export const CHARACTERS: Record<CharacterId, CharacterType> = {
       '週ごとに異なる地形・距離のライドを取り入れてバランスを維持しましょう',
       '目標レースを決めて、それに向けた特化トレーニングを組みましょう',
     ],
+    female: {
+      name: 'オムニ・グレース',
+      title: '万能の女傑',
+      catchphrase: '「状況に合わせるのが強さ。それが私のスタイル」',
+      specialMove: '⚔️ オムニ・グレース',
+      description: '山でも平地でも、短距離でも長距離でも高いレベルで走れる真の万能選手。「弱点を作らない」という意志と努力が、あらゆる局面を制する力になる。',
+      lore: '複数のスポーツを経験してきた運動神経抜群の万能人。「できないことを探す方が難しい」と笑う。',
+    },
     colorClass: 'from-orange-500 to-red-500',
     accentColor: '#FC4C02',
     bgClass: 'bg-orange-900/30',
@@ -141,6 +205,14 @@ export const CHARACTERS: Record<CharacterId, CharacterType> = {
       'グループライドに参加すると走る距離が自然と伸びます',
       '月に1回だけ少し頑張るライドを入れると成長を実感できます',
     ],
+    female: {
+      name: 'フリーダム・サニー',
+      title: '風まかせの自由人',
+      catchphrase: '「自転車があれば、毎日がちょっと特別」',
+      specialMove: '⚔️ ハッピー・ライド',
+      description: 'タイムよりカフェ、KOMよりフォトスポット——自転車を最高に楽しむ達人。走ること自体が目的で、そのポジティブなエネルギーが周りを笑顔にする。',
+      lore: '友人に誘われたポタリングで自転車の魅力に目覚めた。ライド後のスイーツが何よりの楽しみ。',
+    },
     colorClass: 'from-pink-500 to-rose-500',
     accentColor: '#EC4899',
     bgClass: 'bg-pink-900/30',
