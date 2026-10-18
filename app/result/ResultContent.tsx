@@ -169,7 +169,7 @@ function RadarChart({ scores, color }: { scores: AnalysisResult['scores']; color
   }).join(' ')
 
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="mx-auto">
+    <svg width={size} height={size} viewBox={`-25 -25 ${size + 50} ${size + 50}`} className="mx-auto">
       {[25, 50, 75, 100].map((pct) => (
         <polygon key={pct} points={gridPolygon(pct)} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
       ))}
