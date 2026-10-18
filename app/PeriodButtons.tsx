@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { gtagEvent } from '@/lib/gtag'
 
 const PERIODS = [
   { label: '3ヶ月', period: '90' },
@@ -11,8 +12,9 @@ const PERIODS = [
 export default function PeriodButtons() {
   const [loading, setLoading] = useState<string | null>(null)
 
-  const handleClick = (period: string) => {
+  const handleClick = (period: string, label: string) => {
     if (loading) return
+    gtagEvent('diagnosis_start', { period: label })
     setLoading(period)
     window.location.href = `/api/auth/strava?period=${period}`
   }
@@ -24,7 +26,7 @@ export default function PeriodButtons() {
         {PERIODS.map(({ label, period }) => (
           <button
             key={period}
-            onClick={() => handleClick(period)}
+            onClick={() => handleClick(period, label)}
             disabled={!!loading}
             className="flex flex-col items-center gap-2 bg-white/5 hover:bg-[#FC4C02] border border-white/15 hover:border-[#FC4C02] text-white/70 hover:text-white font-bold px-6 py-4 rounded-2xl transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/25 hover:-translate-y-0.5 group disabled:opacity-50 disabled:cursor-wait disabled:hover:bg-white/5 disabled:hover:border-white/15 disabled:hover:-translate-y-0"
           >

@@ -5,6 +5,7 @@
 
 import { useRef, useState } from 'react'
 import { getGenderText, type CharacterId, type CharacterType } from '@/lib/character'
+import { gtagEvent } from '@/lib/gtag'
 
 interface Props {
   character: CharacterType
@@ -42,11 +43,13 @@ export default function ShareCard({ character, characterId, athleteName, sex, pe
           canvas.toBlob((b) => resolve(b!), 'image/png')
         )
         const file = new File([blob], filename, { type: 'image/png' })
+        gtagEvent('share_card', { character_id: characterId, method: 'share' })
         await navigator.share({ files: [file], title: 'VeloAva キャラクター診断' })
         return
       }
 
       // デスクトップ: PNGダウンロード
+      gtagEvent('share_card', { character_id: characterId, method: 'download' })
       const link = document.createElement('a')
       link.download = filename
       link.href = canvas.toDataURL('image/png')
