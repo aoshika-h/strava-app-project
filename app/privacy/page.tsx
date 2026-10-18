@@ -25,7 +25,7 @@ export default function PrivacyPage() {
         <div className="mb-10">
           <Link href="/" className="text-xs text-white/30 hover:text-white/60 transition-colors">← VeloAva トップ</Link>
           <h1 className="text-2xl font-black mt-4 mb-1">プライバシーポリシー</h1>
-          <p className="text-xs text-white/30">Privacy Policy — 最終更新: 2024年10月</p>
+          <p className="text-xs text-white/30">Privacy Policy — 最終更新: 2026年10月</p>
         </div>
 
         {/* ===== 日本語 ===== */}
@@ -62,7 +62,10 @@ export default function PrivacyPage() {
         </Section>
 
         <Section title="6. お問い合わせ">
-          <p>プライバシーに関するご質問は、アプリ内のフィードバック機能またはGitHubリポジトリよりお問い合わせください。</p>
+          <p>プライバシーに関するご質問は下記メールアドレスまでお問い合わせください。</p>
+          <p className="mt-2">
+            <a href="mailto:veloava@aoshika.net" className="text-orange-400 hover:underline">veloava@aoshika.net</a>
+          </p>
         </Section>
 
         {/* ===== English Summary ===== */}
@@ -85,6 +88,10 @@ export default function PrivacyPage() {
             <div>
               <h3 className="text-white/70 font-bold mb-1">Strava API Usage</h3>
               <p>This application uses read-only Strava API access (<code className="text-white/40">read, activity:read_all</code>). We do not write, modify, or delete any data on Strava.</p>
+            </div>
+            <div>
+              <h3 className="text-white/70 font-bold mb-1">Contact</h3>
+              <p>For privacy-related inquiries, please contact us at <a href="mailto:veloava@aoshika.net" className="text-orange-400 hover:underline">veloava@aoshika.net</a>.</p>
             </div>
           </div>
         </div>
