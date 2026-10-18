@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { gtagEvent } from '@/lib/gtag'
 
 const PERIODS = [
@@ -11,6 +11,11 @@ const PERIODS = [
 
 export default function PeriodButtons() {
   const [loading, setLoading] = useState<string | null>(null)
+
+  useEffect(() => {
+    document.body.style.overflow = loading ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [loading])
 
   const handleClick = (period: string, label: string) => {
     if (loading) return
