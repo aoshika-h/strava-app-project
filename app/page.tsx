@@ -145,7 +145,10 @@ export default function HomePage({ searchParams }: PageProps) {
 
       {/* フッター */}
       <footer className="border-t border-white/5 py-6 text-center text-xs text-white/20">
-        Stravaのデータは分析にのみ使用し、保存・共有しません
+        <p>Stravaのデータは分析にのみ使用し、保存・共有しません</p>
+        <Link href="/privacy" className="mt-1 inline-block hover:text-white/40 transition-colors underline underline-offset-2">
+          プライバシーポリシー
+        </Link>
       </footer>
     </main>
   )
