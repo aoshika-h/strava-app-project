@@ -43,13 +43,13 @@ export default function PeriodButtons() {
 
             {/* Stravaアイコン + スピナー */}
             <div className="relative">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#FC4C0220', border: '1px solid #FC4C0240' }}>
+              <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: '#FC4C0220', border: '1px solid #FC4C0240' }}>
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="#FC4C02">
                   <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0 3 13.828h4.17" />
                 </svg>
               </div>
               {/* スピナーリング */}
-              <div className="absolute -inset-1.5 rounded-[18px] border-2 border-t-[#FC4C02] border-r-[#FC4C02]/30 border-b-transparent border-l-transparent animate-spin" />
+              <div className="absolute -inset-1.5 rounded-full border-2 border-t-[#FC4C02] border-r-[#FC4C02]/30 border-b-transparent border-l-transparent animate-spin" />
             </div>
 
             <div>
