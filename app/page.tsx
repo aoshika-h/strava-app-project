@@ -3,6 +3,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
+import PeriodButtons from './PeriodButtons'
 
 // URLパラメータのエラーメッセージマッピング
 const ERROR_MESSAGES: Record<string, string> = {
@@ -57,24 +58,7 @@ export default function HomePage({ searchParams }: PageProps) {
           {/* 期間選択 + Strava連携ボタン */}
           <div className="flex flex-col items-center gap-4">
             <p className="text-sm text-white/50">分析する期間を選択</p>
-            <div className="flex gap-3">
-              {[
-                { label: '3ヶ月', period: '90' },
-                { label: '6ヶ月', period: '180' },
-                { label: '1年', period: '365' },
-              ].map(({ label, period }) => (
-                <Link
-                  key={period}
-                  href={`/api/auth/strava?period=${period}`}
-                  className="flex flex-col items-center gap-2 bg-white/5 hover:bg-[#FC4C02] border border-white/15 hover:border-[#FC4C02] text-white/70 hover:text-white font-bold px-6 py-4 rounded-2xl transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/25 hover:-translate-y-0.5 group"
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="opacity-60 group-hover:opacity-100">
-                    <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0 3 13.828h4.17" />
-                  </svg>
-                  <span className="text-base">{label}</span>
-                </Link>
-              ))}
-            </div>
+            <PeriodButtons />
           </div>
 
           <p className="mt-2 text-xs text-white/30">

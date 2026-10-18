@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exchangeCode, getActivities } from '@/lib/strava'
 import { analyzeCharacter } from '@/lib/character'
+import { analyzePersonality } from '@/lib/personality'
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
 
@@ -36,6 +37,12 @@ export async function GET(request: NextRequest) {
 
     // ステップ3: アクティビティデータを分析してキャラクターを判定
     const result = analyzeCharacter(activities, athlete, periodDays)
+
+    // ステップ3.5: 説明文から性格コメントを生成（失敗時はnull）
+    const descriptions = activities
+      .map((a) => a.description ?? '')
+      .filter(Boolean)
+    result.personalityComment = await analyzePersonality(descriptions)
 
     // ステップ4: 結果をBase64エンコードしてURLパラメータとして渡す
     // サーバーサイドのセッションを使わずにVercelで動作させるため
