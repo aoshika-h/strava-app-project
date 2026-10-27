@@ -1,0 +1,18 @@
+RewriteEngine On
+
+# HTTPS 強制（さくらはプロキシ経由で SSL 終端するため X-Sakura-Forwarded-For で判定）
+RewriteCond %{HTTP:X-Sakura-Forwarded-For} ^$
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+# ドットファイル（.env 等を誤って置いた場合も含む）は拒否
+RewriteRule (^|/)\. - [F,L]
+
+# CGI/FastCGI 版 PHP に Authorization ヘッダーを渡す
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# すべて index.php へ
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ index.php [QSA,L]
+
+Options -Indexes

@@ -20,3 +20,6 @@ Thumbs.db
 # エディタ
 .vscode/
 .idea/
+
+# intervals.icu プロキシ設定（sakura-api）
+icu-proxy.env
