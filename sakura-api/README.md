@@ -36,6 +36,57 @@ intervals.icu の API キーをクライアントに渡さずにトレーニン�
 | `CORS_ALLOWED_ORIGINS` | | ブラウザから直接呼ぶ場合に許可するオリジン（カンマ区切り）。空なら CORS 無効 |
 | `ICU_TIMEZONE` | | `days` の基準日を決めるタイムゾーン（既定 `Asia/Tokyo`） |
 
+## git push でデプロイする
+
+さくら側にベアリポジトリを作り、`main` がプッシュされたら `sakura-api/public` の中身だけを `~/www/icu-proxy/` に展開する（`deploy/post-receive`）。Next.js アプリなど他のファイルは公開ディレクトリに出ない。
+
+### 初回セットアップ（1回だけ）
+
+1. **SSH 鍵の登録**（Windows の PowerShell）
+
+   ```powershell
+   ssh-keygen -t ed25519            # 鍵がなければ作成（~/.ssh/id_ed25519.pub）
+   type $env:USERPROFILE\.ssh\id_ed25519.pub
+   ```
+
+   表示された公開鍵を、さくらにパスワードで SSH ログインして `~/.ssh/authorized_keys` に追記する。
+
+   ```sh
+   ssh <アカウント名>@<アカウント名>.sakura.ne.jp
+   mkdir -p ~/.ssh && chmod 700 ~/.ssh
+   echo '<公開鍵の1行>' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys
+   ```
+
+2. **さくら側にベアリポジトリとフックを作る**（さくらに SSH ログインした状態で）
+
+   ```sh
+   mkdir -p ~/git && git init --bare ~/git/icu-proxy.git
+   vi ~/git/icu-proxy.git/hooks/post-receive   # deploy/post-receive の中身を貼り付ける
+   chmod +x ~/git/icu-proxy.git/hooks/post-receive
+   ```
+
+   展開先やブランチを変える場合は、フック先頭の `DEPLOY_DIR` / `DEPLOY_BRANCH` を編集する。
+
+3. **設定ファイル**は上の手順 3 のとおり `~/icu-proxy.env` を手で置く（リポジトリには含めない）。
+
+4. **ローカルにリモートを追加**（Windows のリポジトリのフォルダで）
+
+   ```powershell
+   git remote add sakura <アカウント名>@<アカウント名>.sakura.ne.jp:git/icu-proxy.git
+   ```
+
+### デプロイ
+
+```powershell
+git push sakura main
+```
+
+`remote: deploy: sakura-api/public (...) -> /home/<アカウント名>/www/icu-proxy` と表示されれば反映済み。
+`main` 以外のブランチを試しに出したいときは `git push sakura <ブランチ名>:main`。
+
+- `git-receive-pack: command not found` になる場合は、`git config remote.sakura.receivepack /usr/local/bin/git-receive-pack` を実行する。
+- リポジトリから消したファイルは公開ディレクトリからは自動で消えない。不要になったファイルは手で削除する。
+
 ## 認証
 
 全エンドポイントで `Authorization: Bearer {PROXY_TOKEN}` ヘッダーが必要。トークンが一致しなければ `403` を返す。

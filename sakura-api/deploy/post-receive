@@ -1,0 +1,25 @@
+#!/bin/sh
+# さくらのサーバ上のベアリポジトリ用 post-receive フック。
+# DEPLOY_BRANCH にプッシュされたら、sakura-api/public の中身だけを DEPLOY_DIR に展開する。
+# （Next.js アプリなど他のファイルは公開ディレクトリに出さない）
+
+DEPLOY_BRANCH=main
+DEPLOY_DIR="$HOME/www/icu-proxy"
+SRC_PATH=sakura-api/public
+ZERO=0000000000000000000000000000000000000000
+
+while read oldrev newrev ref; do
+    [ "$ref" = "refs/heads/$DEPLOY_BRANCH" ] || continue
+    if [ "$newrev" = "$ZERO" ]; then
+        echo "deploy: $DEPLOY_BRANCH が削除されたため展開しません"
+        continue
+    fi
+
+    mkdir -p "$DEPLOY_DIR" || exit 1
+    if git archive "$newrev" "$SRC_PATH" | tar -x -f - -C "$DEPLOY_DIR" --strip-components 2; then
+        echo "deploy: $SRC_PATH ($newrev) -> $DEPLOY_DIR"
+    else
+        echo "deploy: 展開に失敗しました" >&2
+        exit 1
+    fi
+done
