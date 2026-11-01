@@ -1,0 +1,282 @@
+openapi: 3.1.0
+info:
+  title: intervals.icu proxy
+  version: 1.0.0
+  description: >-
+    intervals.icu のサイクリングトレーニングデータを取得する読み取り専用 API。
+    数値は intervals.icu が計算した値をそのまま返す。値がない・未計算の項目は null。
+    Strava 経由で取り込まれたアクティビティは詳細が null になる（Strava の API 規約による）。
+servers:
+  - url: https://aoshika.net/icu-proxy
+security:
+  - bearerAuth: []
+
+paths:
+  /activities:
+    get:
+      operationId: listActivities
+      summary: 直近 n 日のアクティビティ一覧（NP・TSS・デカップリング等のサマリー）
+      parameters:
+        - $ref: '#/components/parameters/days7'
+      responses:
+        '200':
+          description: 新しい順のアクティビティ一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ActivitySummary'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /activity/{activity_id}:
+    get:
+      operationId: getActivity
+      summary: 1件のアクティビティ詳細（負荷・パワー・心拍・フィットネス・ゾーン・インターバル表）
+      parameters:
+        - $ref: '#/components/parameters/activityId'
+      responses:
+        '200':
+          description: アクティビティ詳細
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityDetail'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /activity/{activity_id}/power-vs-hr:
+    get:
+      operationId: getPowerVsHr
+      summary: パワー/心拍数の分析（前半/後半比・デカップリング・HR lag・Z2 効率）
+      parameters:
+        - $ref: '#/components/parameters/activityId'
+      responses:
+        '200':
+          description: パワー/心拍数の分析値
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PowerVsHr'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /wellness:
+    get:
+      operationId: listWellness
+      summary: 直近 n 日の日別コンディション（CTL・ATL・フォーム・体重・安静時心拍・HRV・睡眠）
+      parameters:
+        - name: days
+          in: query
+          required: false
+          description: 今日から遡る日数（1〜365、既定 14）。今日を含むため n+1 日分返る
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 365
+            default: 14
+      responses:
+        '200':
+          description: 古い順の日別データ
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Wellness'
+        default:
+          $ref: '#/components/responses/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  parameters:
+    days7:
+      name: days
+      in: query
+      required: false
+      description: 今日から遡る日数（1〜365、既定 7）
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 365
+        default: 7
+    activityId:
+      name: activity_id
+      in: path
+      required: true
+      description: アクティビティ ID（listActivities の id。例 i204425268）
+      schema:
+        type: string
+
+  responses:
+    Error:
+      description: エラー（403 認証失敗、404 なし、400 パラメータ不正、502/504 intervals.icu 側の障害）
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  status: { type: integer }
+                  message: { type: string }
+
+  schemas:
+    ZoneTime:
+      type: object
+      properties:
+        id: { type: string, description: 'Z1〜Z7、SS（スイートスポット）' }
+        secs: { type: integer, description: ゾーン滞在秒数 }
+
+    ActivitySummary:
+      type: object
+      properties:
+        id: { type: string }
+        date: { type: [string, 'null'], description: 開始日（現地時間 YYYY-MM-DD） }
+        name: { type: [string, 'null'] }
+        type: { type: [string, 'null'], description: 'Ride、VirtualRide、Run など' }
+        moving_time: { type: [integer, 'null'], description: 移動時間（秒） }
+        distance: { type: [number, 'null'], description: 距離（m） }
+        elevation: { type: [number, 'null'], description: 獲得標高（m） }
+        ftp: { type: [integer, 'null'], description: 設定 FTP（W） }
+        avg_power: { type: [integer, 'null'], description: 平均パワー（W） }
+        np: { type: [integer, 'null'], description: 正規化パワー（W） }
+        intensity: { type: [number, 'null'], description: 強度（IF、%） }
+        tss: { type: [integer, 'null'], description: トレーニング負荷（TSS 相当） }
+        avg_hr: { type: [integer, 'null'] }
+        max_hr: { type: [integer, 'null'] }
+        cadence: { type: [number, 'null'], description: 平均ケイデンス（rpm） }
+        decoupling: { type: [number, 'null'], description: 有酸素デカップリング（%）。5% 未満が目安 }
+        pw_hr: { type: [number, 'null'], description: パワー/心拍数 }
+        eftp: { type: [integer, 'null'], description: 推定 FTP（W） }
+        kj: { type: [number, 'null'], description: 仕事量（kJ） }
+        zone_times:
+          type: [array, 'null']
+          items: { $ref: '#/components/schemas/ZoneTime' }
+        description: { type: [string, 'null'], description: アクティビティの説明文 }
+
+    Interval:
+      type: object
+      properties:
+        type: { type: [string, 'null'], description: 'WORK（ワーク）または RECOVERY（リカバリー）' }
+        label: { type: [string, 'null'] }
+        start_index: { type: [integer, 'null'], description: 開始位置（秒） }
+        end_index: { type: [integer, 'null'] }
+        elapsed_time: { type: [integer, 'null'], description: 経過時間（秒） }
+        moving_time: { type: [integer, 'null'] }
+        distance: { type: [number, 'null'], description: m }
+        avg_power: { type: [integer, 'null'], description: W }
+        np: { type: [integer, 'null'], description: W }
+        cadence: { type: [number, 'null'] }
+        torque: { type: [number, 'null'], description: 平均トルク（Nm） }
+        avg_hr: { type: [integer, 'null'] }
+        max_hr: { type: [integer, 'null'] }
+        gradient: { type: [number, 'null'], description: '平均勾配（比率。0.05 = 5%）' }
+        intensity: { type: [integer, 'null'], description: 強度（FTP 比 %） }
+        zone: { type: [integer, 'null'], description: パワーゾーン 1〜7 }
+
+    ActivityDetail:
+      type: object
+      properties:
+        id: { type: string }
+        date: { type: [string, 'null'] }
+        start_time: { type: [string, 'null'], description: 開始日時（現地時間） }
+        name: { type: [string, 'null'] }
+        type: { type: [string, 'null'] }
+        source: { type: [string, 'null'], description: 'GARMIN_CONNECT、STRAVA など' }
+        distance: { type: [number, 'null'], description: m }
+        moving_time: { type: [integer, 'null'], description: 秒 }
+        elapsed_time: { type: [integer, 'null'], description: 秒 }
+        coasting_time: { type: [integer, 'null'], description: 慣性走行時間（秒） }
+        avg_speed: { type: [number, 'null'], description: 平均速度（m/s） }
+        elevation: { type: [number, 'null'], description: 獲得標高（m） }
+        cadence: { type: [number, 'null'] }
+        intensity: { type: [number, 'null'], description: 強度（IF、%） }
+        tss: { type: [integer, 'null'], description: トレーニング負荷 }
+        rpe: { type: [integer, 'null'] }
+        feel: { type: [integer, 'null'] }
+        session_rpe: { type: [integer, 'null'] }
+        strain_score: { type: [number, 'null'], description: 'ストレインスコア（SS）' }
+        strain_score_cp: { type: [number, 'null'], description: SS のうち CP 以下の寄与 }
+        strain_score_w_prime: { type: [number, 'null'], description: SS のうち W' の寄与 }
+        strain_score_p_max: { type: [number, 'null'], description: SS のうち Pmax の寄与 }
+        trimp: { type: [number, 'null'] }
+        polarization_index: { type: [number, 'null'], description: トレーニング分布の指数 }
+        avg_hr: { type: [integer, 'null'] }
+        max_hr: { type: [integer, 'null'] }
+        hrrc: { type: [integer, 'null'], description: 心拍回復 }
+        np: { type: [integer, 'null'], description: 正規化パワー（W） }
+        avg_power: { type: [integer, 'null'], description: W }
+        variability_index: { type: [number, 'null'], description: パワー変動（NP/平均） }
+        pw_hr: { type: [number, 'null'], description: パワー/心拍数 }
+        efficiency_factor: { type: [number, 'null'], description: 効率（NP/平均心拍） }
+        decoupling: { type: [number, 'null'], description: デカップリング（%） }
+        pw_hr_z2: { type: [number, 'null'], description: Z2 でのパワー/心拍数 }
+        pw_hr_z2_mins: { type: [integer, 'null'], description: Z2 の持続時間（分） }
+        ctl: { type: [number, 'null'], description: フィットネス（アクティビティ時点） }
+        atl: { type: [number, 'null'], description: ファティーグ（アクティビティ時点） }
+        form: { type: [number, 'null'], description: フォーム（CTL − ATL） }
+        ftp: { type: [integer, 'null'], description: 設定 FTP（W） }
+        eftp: { type: [integer, 'null'], description: 推定 FTP（W） }
+        activity_eftp: { type: [integer, 'null'], description: このアクティビティから推定した FTP（W） }
+        w_prime: { type: [integer, 'null'], description: "W'（J）" }
+        p_max: { type: [integer, 'null'], description: Pmax（W） }
+        max_wbal_depletion_kj: { type: [number, 'null'], description: "W' 残量の最大ドロップ（kJ）" }
+        weight: { type: [number, 'null'], description: kg }
+        kj: { type: [number, 'null'], description: 仕事量（kJ） }
+        kj_above_ftp: { type: [number, 'null'], description: FTP 超の仕事量（kJ） }
+        calories: { type: [integer, 'null'] }
+        carbs_used: { type: [integer, 'null'], description: 消費炭水化物（g） }
+        carbs_ingested: { type: [integer, 'null'], description: 摂取炭水化物（g） }
+        interval_summary:
+          type: [array, 'null']
+          items: { type: string }
+          description: '例 "5x 36s 302w"'
+        power_zones:
+          type: [array, 'null']
+          items: { type: integer }
+          description: 各パワーゾーン上限（FTP 比 %）
+        sweet_spot_min: { type: [integer, 'null'], description: FTP 比 % }
+        sweet_spot_max: { type: [integer, 'null'], description: FTP 比 % }
+        zone_times:
+          type: [array, 'null']
+          items: { $ref: '#/components/schemas/ZoneTime' }
+        intervals:
+          type: array
+          items: { $ref: '#/components/schemas/Interval' }
+        description: { type: [string, 'null'] }
+
+    PowerVsHr:
+      type: object
+      properties:
+        pw_hr: { type: [number, 'null'], description: パワー/心拍数（全体） }
+        pw_hr_first_half: { type: [number, 'null'], description: 前半 }
+        pw_hr_second_half: { type: [number, 'null'], description: 後半 }
+        decoupling: { type: [number, 'null'], description: デカップリング（%） }
+        hr_lag: { type: [integer, 'null'], description: パワーに対する心拍の遅れ（秒） }
+        pw_hr_z2: { type: [number, 'null'] }
+        cadence_z2_median: { type: [number, 'null'] }
+        cadence_z2_avg: { type: [number, 'null'] }
+        warmup: { type: [integer, 'null'], description: 除外したウォームアップ（秒） }
+        cooldown: { type: [integer, 'null'], description: 除外したクールダウン（秒） }
+        ratio_coefficients:
+          type: [array, 'null']
+          items: { type: number }
+
+    Wellness:
+      type: object
+      properties:
+        date: { type: string, description: YYYY-MM-DD }
+        ctl: { type: [number, 'null'], description: フィットネス }
+        atl: { type: [number, 'null'], description: ファティーグ }
+        form: { type: [number, 'null'], description: フォーム（CTL − ATL） }
+        weight: { type: [number, 'null'], description: kg }
+        resting_hr: { type: [integer, 'null'] }
+        hrv: { type: [number, 'null'] }
+        sleep_secs: { type: [integer, 'null'], description: 睡眠時間（秒） }
