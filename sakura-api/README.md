@@ -128,6 +128,11 @@ curl -H "Authorization: Bearer $PROXY_TOKEN" "https://example.sakura.ne.jp/icu-p
 `/athlete/{id}/wellness` から `date, ctl, atl, form, weight, resting_hr, hrv, sleep_secs` を返す。
 `form` は intervals.icu の `form` フィールドがあればその値、なければ `ctl - atl`。`hrv`・`sleep_secs` などは未入力なら `null`。
 
+### `GET /activity/{activity_id}`
+
+intervals.icu のアクティビティ画面に相当するデータ（サマリー・負荷・パワー・心拍・フィットネス・エネルギー・ゾーン・インターバル表）を返す。内部では `/activity/{id}?intervals=true` を呼ぶ。
+`?raw=1` を付けると intervals.icu の応答をそのまま返す（フィールド名の確認用）。値がないフィールドは `null`。
+
 ### `GET /streams/{activity_id}?types={csv}`
 
 `/activity/{activity_id}/streams?types=...` のレスポンスをそのまま返す（生ストリーム）。`types` の既定は `time,watts,heart_rate,cadence`。データ量が大きいので、必要なときだけ呼ぶこと（クライアントが `Accept-Encoding: gzip` を送れば gzip 圧縮で返る）。

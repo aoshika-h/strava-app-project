@@ -6,6 +6,7 @@ declare(strict_types=1);
  *
  * GET /activities?days=7
  * GET /wellness?days=14
+ * GET /activity/{activity_id}        （?raw=1 で intervals.icu の応答をそのまま返す）
  * GET /streams/{activity_id}?types=time,watts,heart_rate,cadence
  *
  * クライアント認証: Authorization: Bearer {PROXY_TOKEN}
@@ -297,11 +298,130 @@ function handle_wellness(array $config): void
     send_json(200, array_values($result));
 }
 
-function handle_streams(array $config, string $activityId): void
+function require_activity_id(string $activityId): void
 {
     if (!preg_match('/^[A-Za-z0-9_-]{1,64}$/', $activityId)) {
         send_error(400, 'invalid activity id');
     }
+}
+
+/**
+ * アクティビティ詳細（intervals.icu のアクティビティ画面のサマリー・ゾーン・インターバル表に相当）。
+ * ?raw=1 で intervals.icu のレスポンスを加工せずに返す（フィールド名の確認用）。
+ */
+function handle_activity(array $config, string $activityId): void
+{
+    require_activity_id($activityId);
+    $body = icu_get($config, '/activity/' . $activityId, ['intervals' => 'true'], REQUEST_TIMEOUT_SEC);
+    if (($_GET['raw'] ?? '') === '1') {
+        http_response_code(200);
+        echo $body;
+        exit;
+    }
+
+    $a = json_decode($body, true);
+    if (!is_array($a)) {
+        send_error(502, 'unexpected upstream response');
+    }
+
+    $start = $a['start_date_local'] ?? null;
+    $ctl = $a['icu_ctl'] ?? null;
+    $atl = $a['icu_atl'] ?? null;
+
+    $intervals = array_map(static fn(array $i): array => [
+        'type' => $i['type'] ?? null,
+        'label' => $i['label'] ?? null,
+        'start_index' => $i['start_index'] ?? null,
+        'end_index' => $i['end_index'] ?? null,
+        'elapsed_time' => $i['elapsed_time'] ?? null,
+        'moving_time' => $i['moving_time'] ?? null,
+        'distance' => $i['distance'] ?? null,
+        'avg_power' => $i['average_watts'] ?? null,
+        'np' => $i['weighted_average_watts'] ?? null,
+        'cadence' => $i['average_cadence'] ?? null,
+        'torque' => $i['average_torque'] ?? null,
+        'avg_hr' => $i['average_heartrate'] ?? null,
+        'max_hr' => $i['max_heartrate'] ?? null,
+        'gradient' => $i['average_gradient'] ?? null,
+        'intensity' => $i['intensity'] ?? null,
+        'zone' => $i['zone'] ?? null,
+    ], array_values(array_filter($a['icu_intervals'] ?? [], 'is_array')));
+
+    send_json(200, [
+        'id' => $a['id'] ?? null,
+        'date' => is_string($start) ? substr($start, 0, 10) : null,
+        'start_time' => $start,
+        'name' => $a['name'] ?? null,
+        'type' => $a['type'] ?? null,
+        'source' => $a['source'] ?? null,
+
+        // 概要
+        'distance' => $a['distance'] ?? null,
+        'moving_time' => $a['moving_time'] ?? null,
+        'elapsed_time' => $a['elapsed_time'] ?? null,
+        'coasting_time' => $a['coasting_time'] ?? null,
+        'avg_speed' => $a['average_speed'] ?? null,
+        'elevation' => $a['total_elevation_gain'] ?? null,
+        'cadence' => $a['average_cadence'] ?? null,
+
+        // 負荷
+        'intensity' => $a['icu_intensity'] ?? null,
+        'tss' => $a['icu_training_load'] ?? null,
+        'rpe' => $a['icu_rpe'] ?? null,
+        'feel' => $a['feel'] ?? null,
+        'session_rpe' => $a['session_rpe'] ?? null,
+        'strain_score' => $a['strain_score'] ?? null,
+        'trimp' => $a['trimp'] ?? null,
+        'polarization_index' => $a['polarization_index'] ?? null,
+
+        // 心拍
+        'avg_hr' => $a['average_heartrate'] ?? null,
+        'max_hr' => $a['max_heartrate'] ?? null,
+        'hrrc' => $a['icu_hrr'] ?? null,
+
+        // パワー
+        'np' => $a['icu_weighted_avg_watts'] ?? null,
+        'avg_power' => $a['icu_average_watts'] ?? null,
+        'variability_index' => $a['icu_variability_index'] ?? null,
+        'pw_hr' => $a['icu_power_hr'] ?? null,
+        'efficiency_factor' => $a['icu_efficiency_factor'] ?? null,
+        'decoupling' => $a['decoupling'] ?? null,
+        'pw_hr_z2' => $a['icu_power_hr_z2'] ?? null,
+
+        // フィットネス・閾値
+        'ctl' => $ctl,
+        'atl' => $atl,
+        'form' => is_numeric($ctl) && is_numeric($atl) ? $ctl - $atl : null,
+        'ftp' => $a['icu_ftp'] ?? null,
+        'eftp' => $a['icu_eftp'] ?? null,
+        'activity_eftp' => $a['icu_pm_ftp'] ?? null,
+        'w_prime' => $a['icu_w_prime'] ?? null,
+        'p_max' => $a['icu_pm_p_max'] ?? null,
+        'max_wbal_depletion' => $a['icu_max_wbal_depletion'] ?? null,
+
+        // エネルギー
+        'weight' => $a['icu_weight'] ?? null,
+        'kj' => $a['icu_joules'] ?? null,
+        'kj_above_ftp' => $a['icu_joules_above_ftp'] ?? null,
+        'calories' => $a['calories'] ?? null,
+        'carbs_used' => $a['carbs_used'] ?? null,
+        'carbs_ingested' => $a['carbs_ingested'] ?? null,
+
+        // ゾーン・インターバル
+        'interval_summary' => $a['interval_summary'] ?? null,
+        'power_zones' => $a['icu_power_zones'] ?? null,
+        'sweet_spot_min' => $a['icu_sweet_spot_min'] ?? null,
+        'sweet_spot_max' => $a['icu_sweet_spot_max'] ?? null,
+        'zone_times' => $a['icu_zone_times'] ?? null,
+        'intervals' => $intervals,
+
+        'description' => $a['description'] ?? null,
+    ]);
+}
+
+function handle_streams(array $config, string $activityId): void
+{
+    require_activity_id($activityId);
     $types = $_GET['types'] ?? DEFAULT_STREAM_TYPES;
     if (!is_string($types) || !preg_match('/^[A-Za-z0-9_]+(,[A-Za-z0-9_]+)*$/', $types)) {
         send_error(400, 'types must be a comma separated list of stream names');
@@ -359,6 +479,8 @@ if ($requestPath === '/activities') {
     handle_activities($config);
 } elseif ($requestPath === '/wellness') {
     handle_wellness($config);
+} elseif (preg_match('#^/activity/([^/]+)$#', $requestPath, $m)) {
+    handle_activity($config, rawurldecode($m[1]));
 } elseif (preg_match('#^/streams/([^/]+)$#', $requestPath, $m)) {
     handle_streams($config, rawurldecode($m[1]));
 }
