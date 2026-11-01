@@ -1,8 +1,6 @@
 RewriteEngine On
 
-# HTTPS 強制（さくらはプロキシ経由で SSL 終端するため X-Sakura-Forwarded-For で判定）
-RewriteCond %{HTTP:X-Sakura-Forwarded-For} ^$
-RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+# HTTPS へのリダイレクトはしない（API のため。クライアントは最初から https:// で呼ぶこと）
 
 # ドットファイル（.env 等を誤って置いた場合も含む）は拒否
 RewriteRule (^|/)\. - [F,L]
