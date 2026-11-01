@@ -1,0 +1,16 @@
+RewriteEngine On
+
+# HTTPS へのリダイレクトはしない（API のため。クライアントは最初から https:// で呼ぶこと）
+
+# ドットファイル（.env 等を誤って置いた場合も含む）は拒否
+RewriteRule (^|/)\. - [F,L]
+
+# CGI/FastCGI 版 PHP に Authorization ヘッダーを渡す
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# すべて index.php へ
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ index.php [QSA,L]
+
+Options -Indexes
