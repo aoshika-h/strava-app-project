@@ -116,7 +116,7 @@ curl -H "Authorization: Bearer $PROXY_TOKEN" "https://example.sakura.ne.jp/icu-p
 | `cadence` | `average_cadence` |
 | `decoupling` | `decoupling` |
 | `pw_hr` | `icu_power_hr` |
-| `eftp` | `icu_eftp` |
+| `eftp` | `icu_rolling_ftp` |
 | `kj` | `icu_joules` |
 | `zone_times` | `icu_zone_times` |
 | `description` | `description` |
@@ -132,6 +132,10 @@ curl -H "Authorization: Bearer $PROXY_TOKEN" "https://example.sakura.ne.jp/icu-p
 
 intervals.icu のアクティビティ画面に相当するデータ（サマリー・負荷・パワー・心拍・フィットネス・エネルギー・ゾーン・インターバル表）を返す。内部では `/activity/{id}?intervals=true` を呼ぶ。
 `?raw=1` を付けると intervals.icu の応答をそのまま返す（フィールド名の確認用）。値がないフィールドは `null`。
+
+### `GET /activity/{activity_id}/power-vs-hr`
+
+パワー/心拍数の分析値（パワー/心拍数・前半/後半・デカップリング・HR lag・パワー/HR Z2 など）を返す。グラフ用のデータは返さない。
 
 ### `GET /streams/{activity_id}?types={csv}`
 

@@ -7,6 +7,7 @@ declare(strict_types=1);
  * GET /activities?days=7
  * GET /wellness?days=14
  * GET /activity/{activity_id}        （?raw=1 で intervals.icu の応答をそのまま返す）
+ * GET /activity/{activity_id}/power-vs-hr
  * GET /streams/{activity_id}?types=time,watts,heart_rate,cadence
  *
  * クライアント認証: Authorization: Bearer {PROXY_TOKEN}
@@ -263,7 +264,7 @@ function handle_activities(array $config): void
             'cadence' => $a['average_cadence'] ?? null,
             'decoupling' => $a['decoupling'] ?? null,
             'pw_hr' => $a['icu_power_hr'] ?? null,
-            'eftp' => $a['icu_eftp'] ?? null,
+            'eftp' => $a['icu_rolling_ftp'] ?? null,
             'kj' => $a['icu_joules'] ?? null,
             'zone_times' => $a['icu_zone_times'] ?? null,
             'description' => $a['description'] ?? null,
@@ -371,13 +372,16 @@ function handle_activity(array $config, string $activityId): void
         'feel' => $a['feel'] ?? null,
         'session_rpe' => $a['session_rpe'] ?? null,
         'strain_score' => $a['strain_score'] ?? null,
+        'strain_score_cp' => $a['ss_cp'] ?? null,
+        'strain_score_w_prime' => $a['ss_w_prime'] ?? null,
+        'strain_score_p_max' => $a['ss_p_max'] ?? null,
         'trimp' => $a['trimp'] ?? null,
         'polarization_index' => $a['polarization_index'] ?? null,
 
         // 心拍
         'avg_hr' => $a['average_heartrate'] ?? null,
         'max_hr' => $a['max_heartrate'] ?? null,
-        'hrrc' => $a['icu_hrr'] ?? null,
+        'hrrc' => $a['icu_hrr']['hrr'] ?? null,
 
         // パワー
         'np' => $a['icu_weighted_avg_watts'] ?? null,
@@ -387,16 +391,17 @@ function handle_activity(array $config, string $activityId): void
         'efficiency_factor' => $a['icu_efficiency_factor'] ?? null,
         'decoupling' => $a['decoupling'] ?? null,
         'pw_hr_z2' => $a['icu_power_hr_z2'] ?? null,
+        'pw_hr_z2_mins' => $a['icu_power_hr_z2_mins'] ?? null,
 
         // フィットネス・閾値
         'ctl' => $ctl,
         'atl' => $atl,
         'form' => is_numeric($ctl) && is_numeric($atl) ? $ctl - $atl : null,
         'ftp' => $a['icu_ftp'] ?? null,
-        'eftp' => $a['icu_eftp'] ?? null,
+        'eftp' => $a['icu_rolling_ftp'] ?? null,
         'activity_eftp' => $a['icu_pm_ftp'] ?? null,
         'w_prime' => $a['icu_w_prime'] ?? null,
-        'p_max' => $a['icu_pm_p_max'] ?? null,
+        'p_max' => $a['p_max'] ?? null,
         'max_wbal_depletion' => $a['icu_max_wbal_depletion'] ?? null,
 
         // エネルギー
@@ -416,6 +421,30 @@ function handle_activity(array $config, string $activityId): void
         'intervals' => $intervals,
 
         'description' => $a['description'] ?? null,
+    ]);
+}
+
+/** パワー/心拍数の分析値（デカップリング・HR lag など）。グラフ用の series / curves は除く。 */
+function handle_power_vs_hr(array $config, string $activityId): void
+{
+    require_activity_id($activityId);
+    $p = json_decode(icu_get($config, '/activity/' . $activityId . '/power-vs-hr.json', [], REQUEST_TIMEOUT_SEC), true);
+    if (!is_array($p)) {
+        send_error(502, 'unexpected upstream response');
+    }
+
+    send_json(200, [
+        'pw_hr' => $p['powerHr'] ?? null,
+        'pw_hr_first_half' => $p['powerHrFirst'] ?? null,
+        'pw_hr_second_half' => $p['powerHrSecond'] ?? null,
+        'decoupling' => $p['decoupling'] ?? null,
+        'hr_lag' => $p['hrLag'] ?? null,
+        'pw_hr_z2' => $p['powerHrZ2'] ?? null,
+        'cadence_z2_median' => $p['medianCadenceZ2'] ?? null,
+        'cadence_z2_avg' => $p['avgCadenceZ2'] ?? null,
+        'warmup' => $p['warmup'] ?? null,
+        'cooldown' => $p['cooldown'] ?? null,
+        'ratio_coefficients' => $p['ratioCoefficients'] ?? null,
     ]);
 }
 
@@ -479,6 +508,8 @@ if ($requestPath === '/activities') {
     handle_activities($config);
 } elseif ($requestPath === '/wellness') {
     handle_wellness($config);
+} elseif (preg_match('#^/activity/([^/]+)/power-vs-hr$#', $requestPath, $m)) {
+    handle_power_vs_hr($config, rawurldecode($m[1]));
 } elseif (preg_match('#^/activity/([^/]+)$#', $requestPath, $m)) {
     handle_activity($config, rawurldecode($m[1]));
 } elseif (preg_match('#^/streams/([^/]+)$#', $requestPath, $m)) {
