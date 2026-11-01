@@ -22,6 +22,12 @@ const REQUEST_TIMEOUT_SEC = 20;
 const STREAM_TIMEOUT_SEC = 40;
 const MAX_RETRIES = 2;
 
+/** intervals.icu の J（ジュール）を kJ に変換する */
+function joules_to_kj($joules): ?float
+{
+    return is_numeric($joules) ? round($joules / 1000, 1) : null;
+}
+
 // ---------------------------------------------------------------------------
 // 設定読み込み
 // ---------------------------------------------------------------------------
@@ -265,7 +271,7 @@ function handle_activities(array $config): void
             'decoupling' => $a['decoupling'] ?? null,
             'pw_hr' => $a['icu_power_hr'] ?? null,
             'eftp' => $a['icu_rolling_ftp'] ?? null,
-            'kj' => $a['icu_joules'] ?? null,
+            'kj' => joules_to_kj($a['icu_joules'] ?? null),
             'zone_times' => $a['icu_zone_times'] ?? null,
             'description' => $a['description'] ?? null,
         ];
@@ -402,12 +408,12 @@ function handle_activity(array $config, string $activityId): void
         'activity_eftp' => $a['icu_pm_ftp'] ?? null,
         'w_prime' => $a['icu_w_prime'] ?? null,
         'p_max' => $a['p_max'] ?? null,
-        'max_wbal_depletion' => $a['icu_max_wbal_depletion'] ?? null,
+        'max_wbal_depletion_kj' => joules_to_kj($a['icu_max_wbal_depletion'] ?? null),
 
         // エネルギー
         'weight' => $a['icu_weight'] ?? null,
-        'kj' => $a['icu_joules'] ?? null,
-        'kj_above_ftp' => $a['icu_joules_above_ftp'] ?? null,
+        'kj' => joules_to_kj($a['icu_joules'] ?? null),
+        'kj_above_ftp' => joules_to_kj($a['icu_joules_above_ftp'] ?? null),
         'calories' => $a['calories'] ?? null,
         'carbs_used' => $a['carbs_used'] ?? null,
         'carbs_ingested' => $a['carbs_ingested'] ?? null,

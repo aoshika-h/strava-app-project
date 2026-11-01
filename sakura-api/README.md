@@ -117,7 +117,7 @@ curl -H "Authorization: Bearer $PROXY_TOKEN" "https://example.sakura.ne.jp/icu-p
 | `decoupling` | `decoupling` |
 | `pw_hr` | `icu_power_hr` |
 | `eftp` | `icu_rolling_ftp` |
-| `kj` | `icu_joules` |
+| `kj` | `icu_joules`（J → kJ に変換） |
 | `zone_times` | `icu_zone_times` |
 | `description` | `description` |
 
