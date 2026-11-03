@@ -143,6 +143,15 @@ intervals.icu のアクティビティ画面に相当するデータ（サマリ
 
 `days` は 1〜365 の整数。範囲外なら `400`。
 
+### `POST /mcp`（MCP サーバー）
+
+claude.ai などの MCP クライアントから使うための MCP サーバー（Streamable HTTP、JSON 応答）。ツールは `list_activities`・`get_activity`・`get_power_vs_hr`・`list_wellness` で、中身は上の各エンドポイントと同じ。
+
+- `Authorization: Bearer {PROXY_TOKEN}` を送れるクライアントは `https://<ドメイン>/icu-proxy/mcp`
+- ヘッダーを設定できないクライアントは、`MCP_URL_SECRET`（32 文字以上）を設定して `https://<ドメイン>/icu-proxy/mcp/{MCP_URL_SECRET}`。URL を知っていれば誰でも使えるので、URL は他人に教えないこと
+
+claude.ai での登録: カスタマイズ → コネクタ → カスタムコネクタを追加 → 上の URL を入力し、認証は「No sign-in」。
+
 ## エラー
 
 ```json
