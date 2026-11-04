@@ -86,17 +86,19 @@ export default function HomePage({ searchParams }: PageProps) {
               className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:bg-white/8 transition-colors group"
             >
               {/* 顔部分のクロップ表示 */}
-              <div className="relative h-36 overflow-hidden">
+              <div className="relative h-36 overflow-hidden bg-[#0A0A0F]">
                 <div
                   className="absolute inset-0 opacity-25"
                   style={{ background: `radial-gradient(circle at 50% 60%, ${c.color}, transparent 70%)` }}
                 />
-                <Image
-                  src={`/characters/${c.id}_male.png`}
-                  alt={c.name}
-                  fill
-                  className="object-cover object-top group-hover:scale-105 transition-transform duration-300"
-                />
+                <div className="absolute inset-0 top-[10px]">
+                  <Image
+                    src={`/characters/${c.id}_male.png`}
+                    alt={c.name}
+                    fill
+                    className="object-cover object-top group-hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
               </div>
               {/* キャラ名 */}
               <div className="px-4 py-3 text-center">
