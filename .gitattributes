@@ -1,1 +1,2 @@
 sakura-api/deploy/post-receive text eol=lf
+sakura-api/deploy/pull-deploy.sh text eol=lf
