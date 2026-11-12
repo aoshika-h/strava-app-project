@@ -10,7 +10,12 @@ const GA_ID = process.env.NEXT_PUBLIC_GA_ID
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'),
+  // プレビューデプロイではOGP画像のURLを本番ではなく自身のURLに向ける
+  metadataBase: new URL(
+    process.env.VERCEL_ENV === 'preview' && process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000',
+  ),
   title: 'VeloAva — あなたのサイクリストキャラクターを診断',
   description: 'Stravaのライドデータを分析して、あなたのサイクリストアバターを診断します',
   openGraph: {
