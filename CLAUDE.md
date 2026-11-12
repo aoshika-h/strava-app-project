@@ -79,7 +79,8 @@ Stravaアプリの **Authorization Callback Domain** は `NEXT_PUBLIC_BASE_URL` 
 
 ## Strava API の制約
 
-- サンドボックスモードでは接続アスリート数が**10人上限**。超過時は `exchangeCode()` が `err.code === 'athlete_limit'` エラーを投げ、トップページに `?error=athlete_limit` でリダイレクトされる。本番利用にはStravaへの拡張申請が必要。
+- 本番アクセス承認済み（2026年11月）。接続アスリート数は**999人上限**。超過時は `exchangeCode()` が `err.code === 'athlete_limit'` エラーを投げ、トップページに `?error=athlete_limit` でリダイレクトされる。
+- レート制限: 全体 600リクエスト/15分・6,000/日、読み取り 300/15分・3,000/日。1診断あたりのAPI呼び出しはアクティビティ取得1回。
 - スコープ: `read,activity:read_all`
 - アクティビティ取得: 最大200件/リクエスト（ページネーションは未実装）
 
