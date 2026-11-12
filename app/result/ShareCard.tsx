@@ -6,6 +6,7 @@
 import { useRef, useState } from 'react'
 import { getGenderText, type CharacterId, type CharacterType } from '@/lib/character'
 import { gtagEvent } from '@/lib/gtag'
+import { shareSlug } from '@/lib/share'
 
 interface Props {
   character: CharacterType
@@ -21,6 +22,17 @@ export default function ShareCard({ character, characterId, athleteName, sex, pe
   const cardRef = useRef<HTMLDivElement>(null)
   const [saving, setSaving] = useState(false)
   const isMobileDevice = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0
+
+  const handleShareX = () => {
+    const shareUrl = `${window.location.origin}/c/${shareSlug(characterId, sex)}`
+    const text = `VeloAvaでサイクリストタイプを診断したら「${genderText.name}」（${genderText.title}）だった！\nあなたは何タイプ？\n#VeloAva #ロードバイク`
+    gtagEvent('share_card', { character_id: characterId, method: 'x' })
+    window.open(
+      `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`,
+      '_blank',
+      'noopener,noreferrer',
+    )
+  }
 
   const handleSave = async () => {
     if (!cardRef.current) return
@@ -66,7 +78,28 @@ export default function ShareCard({ character, characterId, athleteName, sex, pe
   return (
     <div>
       {/* ダウンロードボタン（カードの上に配置） */}
-      <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '16px' }}>
+        <button
+          onClick={handleShareX}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            backgroundColor: '#000',
+            color: '#fff',
+            fontWeight: 900,
+            fontSize: '15px',
+            padding: '12px 24px',
+            borderRadius: '14px',
+            border: '1px solid rgba(255,255,255,0.25)',
+            cursor: 'pointer',
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+          </svg>
+          でポスト
+        </button>
         <button
           onClick={handleSave}
           disabled={saving}

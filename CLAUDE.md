@@ -73,6 +73,10 @@ Stravaアプリの **Authorization Callback Domain** は `NEXT_PUBLIC_BASE_URL` 
 - **SP/タブレット** (`navigator.maxTouchPoints > 0`): Web Share API (`navigator.share`) でネイティブ共有シートを表示
 - **PC**: PNGファイルをダウンロード
 
+### Xシェア (`app/c/[slug]/`)
+
+結果ページの「Xでポスト」ボタンは `/c/{characterId}_{sex}` をintent URLで投稿する。このページの `opengraph-image.tsx` が `next/og` でキャラ別OGP画像を生成し、Xのタイムラインに画像付きカードを出す。キャラ画像はfsで読むため `next.config.mjs` の `outputFileTracingIncludes` で関数にバンドルしている。日本語フォントはGoogle FontsからNoto Sans JPを必要文字だけ取得する。
+
 ### プレビューモード
 
 `/result?preview=climber&sex=female` のようにURLパラメータを指定するとモックデータで結果ページをテスト表示できる（`?data=` より優先）。キャラクターID: `climber | sprinter | tt | granfondo | allrounder | weekend`。
