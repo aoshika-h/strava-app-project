@@ -1,8 +1,4 @@
-import type { CharacterId } from './character'
-
-const CHARACTER_IDS: CharacterId[] = ['climber', 'sprinter', 'tt', 'granfondo', 'allrounder', 'weekend']
-
-export type Sex = 'male' | 'female'
+import { isCharacterId, type CharacterId, type Sex } from './characters'
 
 export function shareSlug(characterId: CharacterId, sex: Sex): string {
   return `${characterId}_${sex}`
@@ -10,7 +6,7 @@ export function shareSlug(characterId: CharacterId, sex: Sex): string {
 
 export function parseShareSlug(slug: string): { characterId: CharacterId; sex: Sex } | null {
   const [id, sex] = slug.split('_')
-  if (!CHARACTER_IDS.includes(id as CharacterId)) return null
+  if (!isCharacterId(id)) return null
   if (sex !== 'male' && sex !== 'female') return null
-  return { characterId: id as CharacterId, sex }
+  return { characterId: id, sex }
 }

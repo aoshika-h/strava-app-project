@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
-import { CHARACTERS, getGenderText } from '@/lib/character'
+import { getCharacter, getVariant } from '@/lib/characters'
 import { parseShareSlug } from '@/lib/share'
 
 interface PageProps {
@@ -14,7 +14,7 @@ interface PageProps {
 export function generateMetadata({ params }: PageProps): Metadata {
   const parsed = parseShareSlug(params.slug)
   if (!parsed) return {}
-  const text = getGenderText(CHARACTERS[parsed.characterId], parsed.sex)
+  const text = getVariant(parsed.characterId, parsed.sex)
   const title = `私のサイクリストタイプは「${text.name}」 — VeloAva`
   const description = 'Stravaのライドデータから、あなたのサイクリストタイプを6種類のキャラクターで診断します。'
   return {
@@ -28,8 +28,8 @@ export function generateMetadata({ params }: PageProps): Metadata {
 export default function SharePage({ params }: PageProps) {
   const parsed = parseShareSlug(params.slug)
   if (!parsed) notFound()
-  const character = CHARACTERS[parsed.characterId]
-  const text = getGenderText(character, parsed.sex)
+  const character = getCharacter(parsed.characterId)
+  const text = getVariant(parsed.characterId, parsed.sex)
 
   return (
     <main className="min-h-screen bg-[#0A0A0F] text-white flex items-center justify-center px-6 py-16">

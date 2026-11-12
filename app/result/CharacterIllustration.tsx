@@ -3,7 +3,7 @@
 // public/characters/ の実画像を表示する
 
 import Image from 'next/image'
-import type { CharacterId } from '@/lib/character'
+import type { CharacterId } from '@/lib/characters'
 
 export default function CharacterIllustration({
   characterId,

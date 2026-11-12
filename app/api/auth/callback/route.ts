@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { exchangeCode, getActivities } from '@/lib/strava'
-import { analyzeCharacter } from '@/lib/character'
+import { analyzeCharacter } from '@/lib/analysis'
 import { analyzePersonality } from '@/lib/personality'
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'

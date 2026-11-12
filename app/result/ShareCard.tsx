@@ -4,21 +4,21 @@
 // このコンポーネントがページ最上部に配置され、ヒーローセクションを兼ねる
 
 import { useRef, useState } from 'react'
-import { getGenderText, type CharacterId, type CharacterType } from '@/lib/character'
+import { getVariant, type Character, type CharacterId, type Sex } from '@/lib/characters'
 import { gtagEvent } from '@/lib/gtag'
 import { shareSlug } from '@/lib/share'
 
 interface Props {
-  character: CharacterType
+  character: Character
   characterId: CharacterId
   athleteName: string
-  sex: 'male' | 'female'
+  sex: Sex
   personalityComment?: string | null
 }
 
 export default function ShareCard({ character, characterId, athleteName, sex, personalityComment }: Props) {
   const imageSrc = `/characters/${characterId}_${sex}.png`
-  const genderText = getGenderText(character, sex)
+  const genderText = getVariant(characterId, sex)
   const cardRef = useRef<HTMLDivElement>(null)
   const [saving, setSaving] = useState(false)
   const isMobileDevice = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0

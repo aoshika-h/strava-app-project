@@ -4,6 +4,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import PeriodButtons from './PeriodButtons'
+import { listCharacters } from '@/lib/characters'
 
 // URLパラメータのエラーメッセージマッピング
 const ERROR_MESSAGES: Record<string, string> = {
@@ -73,14 +74,7 @@ export default function HomePage({ searchParams }: PageProps) {
           6種類のサイクリストタイプ
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {[
-            { id: 'climber',    name: 'クライマー',          desc: '山岳の覇者',      color: '#10B981' },
-            { id: 'sprinter',   name: 'スプリンター',        desc: '瞬速の稲妻',      color: '#F59E0B' },
-            { id: 'tt',         name: 'タイムトライアリスト', desc: '鉄の持続力',      color: '#3B82F6' },
-            { id: 'granfondo',  name: 'グランフォンド',      desc: '地平線の果てまで', color: '#8B5CF6' },
-            { id: 'allrounder', name: 'オールラウンダー',    desc: '万能の勇者',      color: '#FC4C02' },
-            { id: 'weekend',    name: 'サンデーライダー',    desc: '週末の自由人',    color: '#EC4899' },
-          ].map((c) => (
+          {listCharacters().map((c) => (
             <div
               key={c.id}
               className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:bg-white/8 transition-colors group"
@@ -89,19 +83,19 @@ export default function HomePage({ searchParams }: PageProps) {
               <div className="relative h-36 overflow-hidden">
                 <div
                   className="absolute inset-0 opacity-25"
-                  style={{ background: `radial-gradient(circle at 50% 60%, ${c.color}, transparent 70%)` }}
+                  style={{ background: `radial-gradient(circle at 50% 60%, ${c.accentColor}, transparent 70%)` }}
                 />
                 <Image
                   src={`/characters/${c.id}_male.png`}
-                  alt={c.name}
+                  alt={c.typeName}
                   fill
                   className="object-cover object-top group-hover:scale-105 transition-transform duration-300"
                 />
               </div>
               {/* キャラ名 */}
               <div className="px-4 py-3 text-center">
-                <div className="font-bold text-sm">{c.name}</div>
-                <div className="text-xs mt-0.5" style={{ color: c.color }}>{c.desc}</div>
+                <div className="font-bold text-sm">{c.typeName}</div>
+                <div className="text-xs mt-0.5" style={{ color: c.accentColor }}>{c.tagline}</div>
               </div>
             </div>
           ))}

@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { ImageResponse } from 'next/og'
-import { CHARACTERS, getGenderText } from '@/lib/character'
+import { getCharacter, getVariant } from '@/lib/characters'
 import { parseShareSlug } from '@/lib/share'
 
 export const alt = 'VeloAva サイクリストキャラクター診断'
@@ -24,8 +24,8 @@ async function loadJapaneseFont(text: string): Promise<ArrayBuffer | null> {
 
 export default async function Image({ params }: { params: { slug: string } }) {
   const parsed = parseShareSlug(params.slug) ?? { characterId: 'allrounder' as const, sex: 'male' as const }
-  const character = CHARACTERS[parsed.characterId]
-  const text = getGenderText(character, parsed.sex)
+  const character = getCharacter(parsed.characterId)
+  const text = getVariant(parsed.characterId, parsed.sex)
   const accent = character.accentColor
 
   const lines = {

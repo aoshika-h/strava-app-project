@@ -5,7 +5,8 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { CHARACTERS, type AnalysisResult, type CharacterId } from '@/lib/character'
+import type { AnalysisResult } from '@/lib/analysis'
+import { getCharacter, getVariant, isCharacterId, type Character, type CharacterId, type Sex } from '@/lib/characters'
 import ShareCard from './ShareCard'
 
 // ---- localStorage保存型 ----
@@ -46,8 +47,10 @@ function formatDate(iso: string): string {
 
 // ---- キャラクター変化カード ----
 function EvolutionCard({ prev, current }: { prev: StoredResult; current: AnalysisResult }) {
-  const prevChar = CHARACTERS[prev.characterId]
-  const currChar = CHARACTERS[current.characterId]
+  const prevChar = getCharacter(prev.characterId)
+  const prevName = getVariant(prev.characterId, current.sex).name
+  const currChar = getCharacter(current.characterId)
+  const currName = getVariant(current.characterId, current.sex).name
   const changed = prev.characterId !== current.characterId
 
   const scoreKeys: { label: string; key: keyof AnalysisResult['scores'] }[] = [
@@ -69,12 +72,12 @@ function EvolutionCard({ prev, current }: { prev: StoredResult; current: Analysi
             <>
               <div className="text-center">
                 <div className="text-2xl mb-1">{prevChar.emoji}</div>
-                <div className="text-xs text-white/40 font-bold">{prevChar.name}</div>
+                <div className="text-xs text-white/40 font-bold">{prevName}</div>
               </div>
               <div className="text-white/30 text-lg font-thin">→</div>
               <div className="text-center">
                 <div className="text-2xl mb-1">{currChar.emoji}</div>
-                <div className="text-xs font-bold" style={{ color: currChar.accentColor }}>{currChar.name}</div>
+                <div className="text-xs font-bold" style={{ color: currChar.accentColor }}>{currName}</div>
               </div>
               <div
                 className="ml-2 text-xs font-black px-2.5 py-1 rounded-full"
@@ -87,7 +90,7 @@ function EvolutionCard({ prev, current }: { prev: StoredResult; current: Analysi
             <>
               <div className="text-2xl">{currChar.emoji}</div>
               <div className="text-sm font-bold" style={{ color: currChar.accentColor }}>
-                {currChar.name} を維持中
+                {currName} を維持中
               </div>
             </>
           )}
@@ -117,9 +120,8 @@ function EvolutionCard({ prev, current }: { prev: StoredResult; current: Analysi
   )
 }
 
-const CHARACTER_IDS: CharacterId[] = ['climber', 'sprinter', 'tt', 'granfondo', 'allrounder', 'weekend']
 
-function buildPreviewResult(characterId: CharacterId, sex: 'male' | 'female'): AnalysisResult {
+function buildPreviewResult(characterId: CharacterId, sex: Sex): AnalysisResult {
   return {
     characterId,
     athleteName: 'テストライダー',
@@ -198,13 +200,13 @@ function RadarChart({ scores, color }: { scores: AnalysisResult['scores']; color
 export default function ResultContent() {
   const searchParams = useSearchParams()
   const dataParam = searchParams.get('data')
-  const previewParam = searchParams.get('preview') as CharacterId | null
+  const previewParam = searchParams.get('preview')
   const sexParam = searchParams.get('sex') === 'female' ? 'female' : 'male'
 
   // ?preview=climber&sex=female でテスト表示（dataパラメータより優先）
-  if (previewParam && CHARACTER_IDS.includes(previewParam)) {
+  if (isCharacterId(previewParam)) {
     const result = buildPreviewResult(previewParam, sexParam)
-    const character = CHARACTERS[result.characterId]
+    const character = getCharacter(result.characterId)
     const { stats, scores } = result
     return <ResultView result={result} character={character} stats={stats} scores={scores} isPreview />
   }
@@ -234,7 +236,7 @@ export default function ResultContent() {
     )
   }
 
-  const character = CHARACTERS[result.characterId]
+  const character = getCharacter(result.characterId)
   const { stats, scores } = result
   return <ResultView result={result} character={character} stats={stats} scores={scores} />
 }
@@ -248,7 +250,7 @@ function ResultView({
   isPreview = false,
 }: {
   result: AnalysisResult
-  character: (typeof CHARACTERS)[keyof typeof CHARACTERS]
+  character: Character
   stats: AnalysisResult['stats']
   scores: AnalysisResult['scores']
   isPreview?: boolean

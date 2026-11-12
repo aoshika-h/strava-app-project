@@ -47,7 +47,7 @@ Stravaアプリの **Authorization Callback Domain** は `NEXT_PUBLIC_BASE_URL` 
 
 サーバーサイドのセッションは使用しない。分析結果（`AnalysisResult`）をJSON→Base64urlエンコードしてURLパラメータ `?data=` に乗せて結果ページに渡す。Vercelのサーバーレス環境で完結する。
 
-### キャラクター判定ロジック (`lib/character.ts`)
+### キャラクター判定ロジック (`lib/analysis.ts`)
 
 `analyzeCharacter()` がStravaアクティビティから統計を算出し、6キャラクターへのスコアを積み上げて最大値のキャラクターを選択する。スコアに使う指標:
 
@@ -58,9 +58,13 @@ Stravaアプリの **Authorization Callback Domain** は `NEXT_PUBLIC_BASE_URL` 
 - **頻度の低さ** → weekend に加点
 - **パワー** (パワーメーターがある場合) → tt・climber に加点
 
-### キャラクター性別対応
+### キャラクター定義 (`lib/characters/`)
 
-`CharacterType` は男性デフォルトのテキストを持ち、`female: GenderVariant` フィールドに女性版テキストを格納する。`getGenderText(character, sex)` で表示用テキストを取得する。キャラクター画像は `public/characters/{characterId}_{sex}.png`（例: `climber_male.png`）。
+- `types.ts`: `CHARACTER_IDS`・`Character`（性別共通の属性）・`CharacterVariant`（性別ごとのテキスト）
+- `data.ts`: 6キャラの定義データのみ。テキストの修正はここだけ
+- `index.ts`: 読み出し窓口（`getCharacter` / `getVariant(id, sex)` / `listCharacters` / `isCharacterId`）。アプリは必ずここ経由で参照する。保存先をDB等に移す場合はこのファイルの実装だけを差し替える
+
+性別テキストは `variants.male` / `variants.female` に対称に持つ（多言語化する場合も同じ形で拡張する）。キャラクター画像は `public/characters/{characterId}_{sex}.png`（例: `climber_male.png`）。
 
 ### AI性格コメント (`lib/personality.ts`)
 
