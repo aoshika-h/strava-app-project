@@ -24,7 +24,11 @@ npx tsc --noEmit # 型チェック（テストの代わりに使用）
 | `NEXT_PUBLIC_BASE_URL` | ベースURL（ローカル: `http://localhost:3000`、本番: Vercel URL） |
 | `ANTHROPIC_API_KEY` | Claude APIキー（省略可。未設定時は性格コメント機能がフォールバックする） |
 
-Stravaアプリの **Authorization Callback Domain** は `NEXT_PUBLIC_BASE_URL` のドメインと一致させる必要がある。
+OAuthの戻り先（redirect_uri）と認証後のリダイレクトは、`NEXT_PUBLIC_BASE_URL` ではなくアクセス中のオリジン（`request.nextUrl.origin`）を使う。そのため本番・Vercelプレビュー・ローカルのどれでも、アクセスしたURLに戻ってくる。
+
+Stravaアプリの **Authorization Callback Domain** は `vercel.app` に設定している。Stravaは登録ドメインのサブドメインを許可するため、本番（`veloava.vercel.app`）とプレビュー（`veloava-git-…-aoshika-hs-projects.vercel.app`）の両方が通る。localhostはStrava側で常に許可されている。独自ドメインに移行したらそのドメインに変更する。
+
+プレビューでStravaログインを試すには、Vercelの環境変数 `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET`（必要なら `ANTHROPIC_API_KEY`）を **Preview** 環境にも設定しておく。
 
 ## アーキテクチャ
 

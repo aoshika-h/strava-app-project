@@ -7,7 +7,6 @@ import { analyzeCharacter } from '@/models/analysis'
 import { analyzePersonality } from '@/models/personality'
 import { encodeResult } from './resultController'
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
 const VALID_PERIODS = ['90', '180', '365']
 
 export function startAuthorization(request: NextRequest): NextResponse {
@@ -16,12 +15,14 @@ export function startAuthorization(request: NextRequest): NextResponse {
     return NextResponse.json({ error: 'STRAVA_CLIENT_IDが設定されていません' }, { status: 500 })
   }
 
+  // 戻り先はアクセス中のオリジン（本番・プレビュー・ローカルで共通に動かすため）
+  const origin = request.nextUrl.origin
   const period = request.nextUrl.searchParams.get('period') ?? '90'
   const safePeriod = VALID_PERIODS.includes(period) ? period : '90'
 
   const authUrl = new URL('https://www.strava.com/oauth/authorize')
   authUrl.searchParams.set('client_id', clientId)
-  authUrl.searchParams.set('redirect_uri', `${BASE_URL}/api/auth/callback`)
+  authUrl.searchParams.set('redirect_uri', `${origin}/api/auth/callback`)
   authUrl.searchParams.set('response_type', 'code')
   authUrl.searchParams.set('approval_prompt', 'auto')
   authUrl.searchParams.set('scope', 'read,activity:read_all')
@@ -32,15 +33,15 @@ export function startAuthorization(request: NextRequest): NextResponse {
 }
 
 export async function handleCallback(request: NextRequest): Promise<NextResponse> {
-  const { searchParams } = request.nextUrl
+  const { searchParams, origin } = request.nextUrl
 
   if (searchParams.get('error')) {
-    return NextResponse.redirect(`${BASE_URL}/?error=access_denied`)
+    return NextResponse.redirect(`${origin}/?error=access_denied`)
   }
 
   const code = searchParams.get('code')
   if (!code) {
-    return NextResponse.redirect(`${BASE_URL}/?error=no_code`)
+    return NextResponse.redirect(`${origin}/?error=no_code`)
   }
 
   try {
@@ -55,12 +56,12 @@ export async function handleCallback(request: NextRequest): Promise<NextResponse
       activities.map((a) => a.description ?? '').filter(Boolean),
     )
 
-    return NextResponse.redirect(`${BASE_URL}/result?data=${encodeResult(result)}`)
+    return NextResponse.redirect(`${origin}/result?data=${encodeResult(result)}`)
   } catch (err) {
     console.error('Strava診断エラー:', err)
     if ((err as { code?: string }).code === 'athlete_limit') {
-      return NextResponse.redirect(`${BASE_URL}/?error=athlete_limit`)
+      return NextResponse.redirect(`${origin}/?error=athlete_limit`)
     }
-    return NextResponse.redirect(`${BASE_URL}/?error=analysis_failed`)
+    return NextResponse.redirect(`${origin}/?error=analysis_failed`)
   }
 }
