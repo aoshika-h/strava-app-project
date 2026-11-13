@@ -51,7 +51,7 @@ Stravaアプリの **Authorization Callback Domain** は `vercel.app` に設定�
   └─ 期間選択（views/home/PeriodButtons）→ /api/auth/strava?period=90|180|365
        └─ authController.startAuthorization: Strava OAuth（stateで期間を引き渡す）
             └─ /api/auth/callback → authController.handleCallback
-                 ├─ models/strava: exchangeCode() / getActivities()
+                 ├─ models/strava: exchangeCode() / getActivities() → revokeToken()（連携解除）
                  ├─ models/analysis: analyzeCharacter()
                  └─ resultController.encodeResult() → /result?data=...
                       └─ app/result/page.tsx（サーバー）→ resultController.getResultPageData()
@@ -105,6 +105,7 @@ Strava API Policy 5.3条により、Strava Data（APIで取得した全データ
 - 本番アクセス承認済み（2026年11月）。接続アスリート数は**999人上限**。超過時は `exchangeCode()` が `err.code === 'athlete_limit'` エラーを投げ、トップページに `?error=athlete_limit` でリダイレクトされる。
 - レート制限: 全体 600リクエスト/15分・6,000/日、読み取り 300/15分・3,000/日。1診断あたりのAPI呼び出しはアクティビティ取得1回。
 - スコープ: `read,activity:read_all`
+- 診断は1回きりの用途なので、アクティビティ取得後に成否に関わらず `revokeToken()`（`POST /oauth/revoke`）で連携を解除し、接続アスリート枠を空ける。旧 `/oauth/deauthorize` は2027-06-01で廃止されるため使わない
 - アクティビティ取得: 最大200件/リクエスト（ページネーションは未実装）
 
 ## デプロイ

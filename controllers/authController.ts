@@ -2,7 +2,7 @@
 // 認証 → アクティビティ取得 → 診断 → 結果ページへのリダイレクトまでを担う
 
 import { NextRequest, NextResponse } from 'next/server'
-import { exchangeCode, getActivities } from '@/models/strava'
+import { exchangeCode, getActivities, revokeToken } from '@/models/strava'
 import { analyzeCharacter } from '@/models/analysis'
 import { encodeResult } from './resultController'
 
@@ -46,9 +46,10 @@ export async function handleCallback(request: NextRequest): Promise<NextResponse
   try {
     const periodDays = Math.min(365, Math.max(90, parseInt(searchParams.get('state') ?? '90', 10) || 90))
 
-    const { access_token, athlete } = await exchangeCode(code)
+    const { access_token, refresh_token, athlete } = await exchangeCode(code)
     const since = Math.floor(Date.now() / 1000) - periodDays * 24 * 60 * 60
-    const activities = await getActivities(access_token, since, 200)
+    // 診断は1回きりでトークンを使い続けないため、取得し終えたら成否に関わらず連携を解除する
+    const activities = await getActivities(access_token, since, 200).finally(() => revokeToken(refresh_token))
 
     const result = analyzeCharacter(activities, athlete, periodDays)
 

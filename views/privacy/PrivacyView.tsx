@@ -29,7 +29,7 @@ export default function PrivacyView() {
           <ul className="list-disc list-inside space-y-1 mt-2">
             <li>アスリートプロフィール（名前、性別）</li>
             <li>アクティビティデータ（距離、速度、獲得標高、パワー）</li>
-            <li>一時的なアクセストークン（診断処理中のみ使用）</li>
+            <li>一時的なアクセストークン（診断処理中のみ使用し、診断後すぐにStravaとの連携を解除します）</li>
           </ul>
           <p className="mt-2">また、Google Analytics 4により、ページビューやクリックイベント（診断開始・シェアボタン）を匿名で収集します。</p>
         </Section>
@@ -69,7 +69,7 @@ export default function PrivacyView() {
           <div className="space-y-6 text-sm text-white/50 leading-relaxed">
             <div>
               <h3 className="text-white/70 font-bold mb-1">Data Collection</h3>
-              <p>VeloAva accesses your Strava athlete profile (name, gender) and activity data (distance, speed, elevation, power) via the official Strava API. A temporary access token is used only during the analysis process. We also collect anonymous usage events via Google Analytics 4.</p>
+              <p>VeloAva accesses your Strava athlete profile (name, gender) and activity data (distance, speed, elevation, power) via the official Strava API. A temporary access token is used only during the analysis process, and VeloAva revokes its access to your Strava account right after the diagnosis. We also collect anonymous usage events via Google Analytics 4.</p>
             </div>
             <div>
               <h3 className="text-white/70 font-bold mb-1">Data Storage</h3>

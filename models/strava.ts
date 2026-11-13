@@ -100,6 +100,25 @@ export async function getActivities(
   return res.json()
 }
 
+// アプリの連携を解除する（アクセス/リフレッシュ両方のトークンが無効になり、接続アスリート枠も空く）
+// 診断の成否に影響させないため、失敗はログのみで例外を投げない
+export async function revokeToken(refreshToken: string): Promise<void> {
+  const credentials = Buffer.from(`${process.env.STRAVA_CLIENT_ID}:${process.env.STRAVA_CLIENT_SECRET}`).toString('base64')
+  try {
+    const res = await fetch('https://www.strava.com/oauth/revoke', {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${credentials}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({ token: refreshToken, token_type_hint: 'refresh_token' }),
+    })
+    if (!res.ok) console.error(`Strava連携解除失敗: ${res.status}`)
+  } catch (e) {
+    console.error('Strava連携解除エラー:', e)
+  }
+}
+
 // アスリートプロフィールを取得する（体重・FTPなどに使用）
 export async function getAthlete(accessToken: string): Promise<StravaAthlete> {
   const res = await fetch(`${STRAVA_API_BASE}/athlete`, {
