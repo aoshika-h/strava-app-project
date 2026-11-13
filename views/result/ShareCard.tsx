@@ -4,19 +4,18 @@
 // このコンポーネントがページ最上部に配置され、ヒーローセクションを兼ねる
 
 import { useRef, useState } from 'react'
-import { getVariant, type Character, type CharacterId, type Sex } from '@/lib/characters'
+import { getVariant, type Character, type CharacterId, type Sex } from '@/models/characters'
 import { gtagEvent } from '@/lib/gtag'
-import { shareSlug } from '@/lib/share'
 
 interface Props {
   character: Character
   characterId: CharacterId
-  athleteName: string
   sex: Sex
   personalityComment?: string | null
+  sharePath: string
 }
 
-export default function ShareCard({ character, characterId, athleteName, sex, personalityComment }: Props) {
+export default function ShareCard({ character, characterId, sex, personalityComment, sharePath }: Props) {
   const imageSrc = `/characters/${characterId}_${sex}.png`
   const genderText = getVariant(characterId, sex)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -24,7 +23,7 @@ export default function ShareCard({ character, characterId, athleteName, sex, pe
   const isMobileDevice = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0
 
   const handleShareX = () => {
-    const shareUrl = `${window.location.origin}/c/${shareSlug(characterId, sex)}`
+    const shareUrl = `${window.location.origin}${sharePath}`
     const text = `VeloAvaでサイクリストタイプを診断したら「${genderText.name}」（${genderText.title}）だった！\nあなたは何タイプ？\n#VeloAva #ロードバイク`
     gtagEvent('share_card', { character_id: characterId, method: 'x' })
     window.open(
