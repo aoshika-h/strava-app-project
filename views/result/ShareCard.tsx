@@ -24,7 +24,7 @@ export default function ShareCard({ character, characterId, sex, sharePath }: Pr
   const handleShareX = () => {
     const shareUrl = `${window.location.origin}${sharePath}`
     const text = `VeloAvaでサイクリストタイプを診断したら「${genderText.name}」（${genderText.title}）だった！\nあなたは何タイプ？\n#VeloAva #ロードバイク`
-    gtagEvent('share_card', { character_id: characterId, method: 'x' })
+    gtagEvent('share_card', { method: 'x' })
     window.open(
       `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`,
       '_blank',
@@ -53,13 +53,13 @@ export default function ShareCard({ character, characterId, sex, sharePath }: Pr
           canvas.toBlob((b) => resolve(b!), 'image/png')
         )
         const file = new File([blob], filename, { type: 'image/png' })
-        gtagEvent('share_card', { character_id: characterId, method: 'share' })
+        gtagEvent('share_card', { method: 'share' })
         await navigator.share({ files: [file], title: 'VeloAva キャラクター診断' })
         return
       }
 
       // デスクトップ: PNGダウンロード
-      gtagEvent('share_card', { character_id: characterId, method: 'download' })
+      gtagEvent('share_card', { method: 'download' })
       const link = document.createElement('a')
       link.download = filename
       link.href = canvas.toDataURL('image/png')
