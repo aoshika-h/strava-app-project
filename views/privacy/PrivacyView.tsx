@@ -28,7 +28,7 @@ export default function PrivacyView() {
           <p>VeloAvaは、Strava APIを通じて以下の情報を取得します。</p>
           <ul className="list-disc list-inside space-y-1 mt-2">
             <li>アスリートプロフィール（名前、性別）</li>
-            <li>アクティビティデータ（距離、速度、獲得標高、パワー、説明文）</li>
+            <li>アクティビティデータ（距離、速度、獲得標高、パワー）</li>
             <li>一時的なアクセストークン（診断処理中のみ使用）</li>
           </ul>
           <p className="mt-2">また、Google Analytics 4により、ページビューやクリックイベント（診断開始・シェアボタン）を匿名で収集します。</p>
@@ -44,12 +44,11 @@ export default function PrivacyView() {
         </Section>
 
         <Section title="4. 第三者サービスへのデータ送信">
-          <p>以下の外部サービスにデータを送信する場合があります。</p>
+          <p>以下の外部サービスにデータを送信します。</p>
           <ul className="list-disc list-inside space-y-1 mt-2">
-            <li><span className="text-white/70 font-medium">Anthropic Claude API</span> — アクティビティの説明文を送信し、性格コメントを生成します。Anthropic APIはデフォルトでユーザーデータをモデルの学習に使用しません。</li>
             <li><span className="text-white/70 font-medium">Google Analytics</span> — 匿名の利用統計（ページビュー、クリックイベント）を収集します。個人を特定する情報は含まれません。</li>
           </ul>
-          <p className="mt-2">上記以外の第三者にStravaデータを提供することはありません。</p>
+          <p className="mt-2">Stravaから取得したデータを第三者（AIサービスを含む）に提供することはありません。</p>
         </Section>
 
         <Section title="5. Strava APIについて">
@@ -70,7 +69,7 @@ export default function PrivacyView() {
           <div className="space-y-6 text-sm text-white/50 leading-relaxed">
             <div>
               <h3 className="text-white/70 font-bold mb-1">Data Collection</h3>
-              <p>VeloAva accesses your Strava athlete profile (name, gender) and activity data (distance, speed, elevation, power, description) via the official Strava API. A temporary access token is used only during the analysis process. We also collect anonymous usage events via Google Analytics 4.</p>
+              <p>VeloAva accesses your Strava athlete profile (name, gender) and activity data (distance, speed, elevation, power) via the official Strava API. A temporary access token is used only during the analysis process. We also collect anonymous usage events via Google Analytics 4.</p>
             </div>
             <div>
               <h3 className="text-white/70 font-bold mb-1">Data Storage</h3>
@@ -78,7 +77,7 @@ export default function PrivacyView() {
             </div>
             <div>
               <h3 className="text-white/70 font-bold mb-1">Third-Party Services</h3>
-              <p>Activity descriptions may be sent to the Anthropic Claude API to generate a personality comment. Anthropic does not use API data for model training by default. Anonymous usage statistics are collected via Google Analytics. No Strava data is sold or shared with any other third party.</p>
+              <p>Anonymous usage statistics are collected via Google Analytics. No Strava data is sold or shared with any third party, including AI services.</p>
             </div>
             <div>
               <h3 className="text-white/70 font-bold mb-1">Strava API Usage</h3>

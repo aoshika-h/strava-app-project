@@ -48,7 +48,6 @@ export default function ResultView({
           character={character}
           characterId={result.characterId}
           sex={result.sex}
-          personalityComment={result.personalityComment}
           sharePath={sharePath}
         />
 

@@ -15,8 +15,12 @@ export function encodeResult(result: AnalysisResult): string {
 
 export function decodeResult(encoded: string): AnalysisResult | null {
   try {
-    const result = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')) as AnalysisResult
-    return isCharacterId(result?.characterId) ? result : null
+    // 廃止したAIコメント（personalityComment）を含む旧URLもあるため、既知のフィールドだけを取り出す
+    const { characterId, athleteName, profileImageUrl, sex, stats, scores } = JSON.parse(
+      Buffer.from(encoded, 'base64url').toString('utf8'),
+    ) as AnalysisResult
+    if (!isCharacterId(characterId)) return null
+    return { characterId, athleteName, profileImageUrl, sex, stats, scores }
   } catch {
     return null
   }

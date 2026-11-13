@@ -22,13 +22,12 @@ npx tsc --noEmit # 型チェック（テストの代わりに使用）
 | `STRAVA_CLIENT_ID` | Strava API Client ID |
 | `STRAVA_CLIENT_SECRET` | Strava API Client Secret |
 | `NEXT_PUBLIC_BASE_URL` | ベースURL（ローカル: `http://localhost:3000`、本番: Vercel URL） |
-| `ANTHROPIC_API_KEY` | Claude APIキー（省略可。未設定時は性格コメント機能がフォールバックする） |
 
 OAuthの戻り先（redirect_uri）と認証後のリダイレクトは、`NEXT_PUBLIC_BASE_URL` ではなくアクセス中のオリジン（`request.nextUrl.origin`）を使う。そのため本番・Vercelプレビュー・ローカルのどれでも、アクセスしたURLに戻ってくる。
 
 Stravaアプリの **Authorization Callback Domain** は `vercel.app` に設定している。Stravaは登録ドメインのサブドメインを許可するため、本番（`veloava.vercel.app`）とプレビュー（`veloava-git-…-aoshika-hs-projects.vercel.app`）の両方が通る。localhostはStrava側で常に許可されている。独自ドメインに移行したらそのドメインに変更する。
 
-プレビューでStravaログインを試すには、Vercelの環境変数 `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET`（必要なら `ANTHROPIC_API_KEY`）を **Preview** 環境にも設定しておく。
+プレビューでStravaログインを試すには、Vercelの環境変数 `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` を **Preview** 環境にも設定しておく。
 
 ## アーキテクチャ
 
@@ -38,7 +37,7 @@ Stravaアプリの **Authorization Callback Domain** は `vercel.app` に設定�
 |----|------|------|
 | ルーティング | `app/` | Next.jsのファイル規約（page / route / layout / opengraph-image）のみ。controllerを呼んでviewに渡すだけの薄い層に保つ |
 | Controller | `controllers/` | リクエストの解釈、modelの呼び出し、viewに渡すデータの組み立て、リダイレクト |
-| Model | `models/` | データとビジネスロジック（キャラ定義、診断、Strava API、AIコメント、前回結果の保存） |
+| Model | `models/` | データとビジネスロジック（キャラ定義、診断、Strava API、前回結果の保存） |
 | View | `views/` | 画面コンポーネント。データ取得やURL解釈はしない |
 | ユーティリティ | `lib/` | GA送信など横断的な小物 |
 
@@ -54,7 +53,6 @@ Stravaアプリの **Authorization Callback Domain** は `vercel.app` に設定�
             └─ /api/auth/callback → authController.handleCallback
                  ├─ models/strava: exchangeCode() / getActivities()
                  ├─ models/analysis: analyzeCharacter()
-                 ├─ models/personality: analyzePersonality()（任意）
                  └─ resultController.encodeResult() → /result?data=...
                       └─ app/result/page.tsx（サーバー）→ resultController.getResultPageData()
                            └─ views/result/ResultView → ShareCard / EvolutionCard / RadarChart
@@ -83,9 +81,9 @@ Stravaアプリの **Authorization Callback Domain** は `vercel.app` に設定�
 
 性別テキストは `variants.male` / `variants.female` に対称に持つ（多言語化する場合も同じ形で拡張する）。キャラクター画像は `public/characters/{characterId}_{sex}.png`（例: `climber_male.png`）。
 
-### AI性格コメント (`models/personality.ts`)
+### AI機能は使わない
 
-アクティビティの `description`（説明文フィールド）を収集してClaude Haiku APIに送信し、ライダーの性格コメントを生成する。意味ある説明文が3件未満・APIキー未設定・APIエラーの場合はすべて `null` を返し、`ShareCard.tsx` が既存のキャラクター `description`/`lore` にフォールバックする。Anthropic APIはデフォルトでデータをモデル学習に利用しない。
+Strava API Policy 5.3条により、Strava Data（APIで取得した全データと、そこから派生した統計・スコア・診断結果を含む）をAIに渡すこと（コンテキストへの投入を含む）は禁止されている。以前あったAI性格コメント機能はこのため削除した。Stravaから来たデータやその派生データを、LLMなどのAIサービスに送る機能は追加しない。
 
 ### シェアカード (`views/result/ShareCard.tsx`)
 

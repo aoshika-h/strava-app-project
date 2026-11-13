@@ -4,7 +4,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exchangeCode, getActivities } from '@/models/strava'
 import { analyzeCharacter } from '@/models/analysis'
-import { analyzePersonality } from '@/models/personality'
 import { encodeResult } from './resultController'
 
 const VALID_PERIODS = ['90', '180', '365']
@@ -52,9 +51,6 @@ export async function handleCallback(request: NextRequest): Promise<NextResponse
     const activities = await getActivities(access_token, since, 200)
 
     const result = analyzeCharacter(activities, athlete, periodDays)
-    result.personalityComment = await analyzePersonality(
-      activities.map((a) => a.description ?? '').filter(Boolean),
-    )
 
     return NextResponse.redirect(`${origin}/result?data=${encodeResult(result)}`)
   } catch (err) {
