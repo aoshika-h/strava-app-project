@@ -137,9 +137,23 @@ intervals.icu のアクティビティ画面に相当するデータ（サマリ
 
 パワー/心拍数の分析値（パワー/心拍数・前半/後半・デカップリング・HR lag・パワー/HR Z2 など）を返す。グラフ用のデータは返さない。
 
+### `GET /activity/{activity_id}/streams?types=&resolution=&start_sec=&end_sec=`
+
+分析用の時系列データを列形式で返す（MCP ツール `get_activity_streams` と同じ）。
+
+- `types`: 既定 `time,watts,heartrate,cadence,velocity_smooth,altitude,distance`（intervals.icu のストリーム名）。`time` は常に含む。`latlng` は返さない
+- `resolution`: 何秒ごとに間引くか（既定 5。`start_sec` / `end_sec` を指定したときは既定 1）。区間内の平均をとり、`time`・`distance` は区間の最後の値。null は null のまま
+- `start_sec` / `end_sec`: 経過秒で区間を指定（start を含み end を含まない）
+- 応答が約 100KB を超えるときは `resolution` を自動で上げる。実際の値は `resolution`、指定値は `requested_resolution`
+
+```json
+{"activity_id":"i209803206","resolution":10,"requested_resolution":10,"start_sec":0,"end_sec":27483,"n":1973,
+ "missing_types":[],"streams":{"time":[...],"watts":[...],"heartrate":[...]}}
+```
+
 ### `GET /streams/{activity_id}?types={csv}`
 
-`/activity/{activity_id}/streams?types=...` のレスポンスをそのまま返す（生ストリーム）。`types` の既定は `time,watts,heart_rate,cadence`。データ量が大きいので、必要なときだけ呼ぶこと（クライアントが `Accept-Encoding: gzip` を送れば gzip 圧縮で返る）。
+`/activity/{activity_id}/streams?types=...` のレスポンスをそのまま返す（生ストリーム）。`types` の既定は `time,watts,heartrate,cadence`。データ量が大きいので、必要なときだけ呼ぶこと（クライアントが `Accept-Encoding: gzip` を送れば gzip 圧縮で返る）。
 
 `days` は 1〜365 の整数。範囲外なら `400`。
 

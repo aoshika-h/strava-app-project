@@ -8,7 +8,8 @@ declare(strict_types=1);
  * GET /wellness?days=14
  * GET /activity/{activity_id}        （?raw=1 で intervals.icu の応答をそのまま返す）
  * GET /activity/{activity_id}/power-vs-hr
- * GET /streams/{activity_id}?types=time,watts,heart_rate,cadence
+ * GET /activity/{activity_id}/streams?types=&resolution=&start_sec=&end_sec=（間引き済みの列形式）
+ * GET /streams/{activity_id}?types=time,watts,heartrate,cadence（intervals.icu の応答をそのまま返す）
  * POST /mcp                          （MCP サーバー。claude.ai のカスタムコネクタ用）
  * POST /mcp/{MCP_URL_SECRET}         （ヘッダーを設定できないクライアント用。URL 自体を鍵にする）
  *
@@ -18,7 +19,14 @@ declare(strict_types=1);
 
 const ICU_BASE_URL = 'https://intervals.icu/api/v1';
 const MAX_DAYS = 365;
-const DEFAULT_STREAM_TYPES = 'time,watts,heart_rate,cadence';
+const DEFAULT_STREAM_TYPES = 'time,watts,heartrate,cadence';
+/** 分析用ストリームの既定（intervals.icu のストリーム名） */
+const ANALYSIS_STREAM_TYPES = ['time', 'watts', 'heartrate', 'cadence', 'velocity_smooth', 'altitude', 'distance'];
+/** 間引くときに平均ではなく区間の最後の値を使うストリーム */
+const LAST_VALUE_STREAM_TYPES = ['time', 'distance'];
+const MAX_STREAM_RESOLUTION = 3600;
+const MAX_STREAM_START_SEC = 7 * 24 * 3600;
+const STREAM_RESPONSE_BYTES_LIMIT = 100000;
 const CONNECT_TIMEOUT_SEC = 5;
 const REQUEST_TIMEOUT_SEC = 20;
 const STREAM_TIMEOUT_SEC = 40;
@@ -461,6 +469,149 @@ function fetch_power_vs_hr(array $config, string $activityId): array
     ];
 }
 
+/** 整数パラメータ（クエリ文字列の文字列、または MCP の整数）を検証する。未指定なら null */
+function parse_int_param($raw, string $name, int $min, int $max): ?int
+{
+    if ($raw === null || $raw === '') {
+        return null;
+    }
+    if (is_string($raw) && ctype_digit($raw)) {
+        $raw = (int) $raw;
+    }
+    if (!is_int($raw) || $raw < $min || $raw > $max) {
+        throw new ApiError("{$name} must be an integer between {$min} and {$max}", 400);
+    }
+    return $raw;
+}
+
+/** types（カンマ区切り文字列または配列）を検証する。time は間引きの基準なので必ず含める */
+function parse_stream_types($raw): array
+{
+    if ($raw === null || $raw === '' || $raw === []) {
+        return ANALYSIS_STREAM_TYPES;
+    }
+    $types = is_string($raw) ? explode(',', $raw) : $raw;
+    if (!is_array($types)) {
+        throw new ApiError('types must be a list of stream names', 400);
+    }
+    foreach ($types as $type) {
+        if (!is_string($type) || !preg_match('/^[A-Za-z0-9_]{1,40}$/', $type)) {
+            throw new ApiError('types must be a list of stream names', 400);
+        }
+    }
+    if (in_array('latlng', $types, true)) {
+        throw new ApiError('latlng (location) is not available', 400);
+    }
+    $types = array_values(array_unique($types));
+    if (!in_array('time', $types, true)) {
+        array_unshift($types, 'time');
+    }
+    return $types;
+}
+
+/**
+ * 時刻（time ストリームの経過秒）で resolution 秒ごとの区間に分け、区間内の平均をとる。
+ * time と distance は区間の最後の値。null は平均から除き、区間内がすべて null なら null。
+ */
+function downsample_streams(array $columns, array $indices, int $origin, int $resolution): array
+{
+    $groups = [];
+    foreach ($indices as $i) {
+        $groups[intdiv((int) $columns['time'][$i] - $origin, $resolution)][] = $i;
+    }
+
+    $out = array_fill_keys(array_keys($columns), []);
+    foreach ($groups as $members) {
+        foreach ($columns as $type => $data) {
+            if (in_array($type, LAST_VALUE_STREAM_TYPES, true)) {
+                $out[$type][] = $data[end($members)] ?? null;
+                continue;
+            }
+            $sum = 0;
+            $count = 0;
+            foreach ($members as $i) {
+                if (is_int($data[$i] ?? null) || is_float($data[$i] ?? null)) {
+                    $sum += $data[$i];
+                    $count++;
+                }
+            }
+            if ($count === 0) {
+                $out[$type][] = null;
+                continue;
+            }
+            $avg = round($sum / $count, 2);
+            $out[$type][] = $avg == floor($avg) ? (int) $avg : $avg;
+        }
+    }
+    return $out;
+}
+
+/**
+ * 分析用のストリーム（列形式）。resolution 秒ごとに間引き、start_sec〜end_sec（end は含まない）で区間を切り出す。
+ * 応答が STREAM_RESPONSE_BYTES_LIMIT を超えるときは resolution を自動で上げる。
+ */
+function fetch_activity_streams(array $config, string $activityId, array $types, ?int $resolution, ?int $startSec, ?int $endSec): array
+{
+    require_activity_id($activityId);
+    if ($startSec !== null && $endSec !== null && $endSec <= $startSec) {
+        throw new ApiError('end_sec must be greater than start_sec', 400);
+    }
+
+    $raw = decode_upstream_list(icu_get(
+        $config,
+        '/activity/' . $activityId . '/streams.json',
+        ['types' => implode(',', $types)],
+        STREAM_TIMEOUT_SEC
+    ));
+    $available = [];
+    foreach ($raw as $stream) {
+        if (is_array($stream) && is_string($stream['type'] ?? null) && is_array($stream['data'] ?? null)) {
+            $available[$stream['type']] = $stream['data'];
+        }
+    }
+    if (!isset($available['time'])) {
+        throw new ApiError('this activity has no time stream', 404);
+    }
+
+    $columns = [];
+    foreach ($types as $type) {
+        if (isset($available[$type])) {
+            $columns[$type] = $available[$type];
+        }
+    }
+
+    $origin = $startSec ?? 0;
+    $indices = [];
+    foreach ($columns['time'] as $i => $t) {
+        if (is_numeric($t) && $t >= $origin && ($endSec === null || $t < $endSec)) {
+            $indices[] = $i;
+        }
+    }
+
+    $requested = $resolution ?? ($startSec !== null || $endSec !== null ? 1 : 5);
+    $used = $requested;
+    while (true) {
+        $streams = downsample_streams($columns, $indices, $origin, $used);
+        $bytes = strlen(json_encode($streams));
+        if ($bytes <= STREAM_RESPONSE_BYTES_LIMIT || $used >= MAX_STREAM_RESOLUTION) {
+            break;
+        }
+        $used = min(MAX_STREAM_RESOLUTION, max($used + 1, (int) ceil($used * $bytes / STREAM_RESPONSE_BYTES_LIMIT * 1.05)));
+    }
+
+    $times = $streams['time'];
+    return [
+        'activity_id' => $activityId,
+        'resolution' => $used,
+        'requested_resolution' => $requested,
+        'start_sec' => $indices ? (int) $columns['time'][$indices[0]] : null,
+        'end_sec' => $times ? end($times) : null,
+        'n' => count($times),
+        'missing_types' => array_values(array_diff($types, array_keys($columns))),
+        'streams' => $streams,
+    ];
+}
+
 function handle_streams(array $config, string $activityId): void
 {
     require_activity_id($activityId);
@@ -527,6 +678,43 @@ function mcp_tools(): array
             'annotations' => $readOnly,
         ],
         [
+            'name' => 'get_activity_streams',
+            'title' => 'ストリーム（秒ごとのデータ）',
+            'description' => 'ライドの時系列データを列形式で返す（深掘り用）。区間ごとの心拍の上がり方、高強度区間の特定、同じパワーでの心拍比較などに使う。'
+                . 'time は経過秒（停止中は記録されない）。resolution 秒ごとに区間の平均（time・distance は区間の最後の値）。null は欠損。'
+                . 'watts=W、heartrate=bpm、cadence=rpm、velocity_smooth=m/s、altitude=m、distance=m。'
+                . '応答が約 100KB を超えると resolution を自動で上げ、実際の値を resolution に返す。',
+            'inputSchema' => [
+                'type' => 'object',
+                'properties' => [
+                    'activity_id' => $activityId,
+                    'types' => [
+                        'type' => 'array',
+                        'items' => ['type' => 'string'],
+                        'description' => '取得するストリーム（既定 ' . implode(', ', ANALYSIS_STREAM_TYPES) . '）。time は常に含まれる',
+                    ],
+                    'resolution' => [
+                        'type' => 'integer',
+                        'minimum' => 1,
+                        'maximum' => MAX_STREAM_RESOLUTION,
+                        'description' => '何秒ごとに間引くか（既定 5。start_sec / end_sec を指定したときは既定 1）',
+                    ],
+                    'start_sec' => [
+                        'type' => 'integer',
+                        'minimum' => 0,
+                        'description' => '区間の開始（経過秒、この値を含む）',
+                    ],
+                    'end_sec' => [
+                        'type' => 'integer',
+                        'minimum' => 1,
+                        'description' => '区間の終了（経過秒、この値を含まない）',
+                    ],
+                ],
+                'required' => ['activity_id'],
+            ],
+            'annotations' => $readOnly,
+        ],
+        [
             'name' => 'list_wellness',
             'title' => 'コンディション',
             'description' => '直近 n 日の日別 CTL（フィットネス）・ATL（ファティーグ）・フォーム・体重・安静時心拍・HRV・睡眠秒。古い順。',
@@ -545,6 +733,15 @@ function mcp_call_tool(array $config, string $name, array $args): array
             return fetch_activity($config, (string) ($args['activity_id'] ?? ''));
         case 'get_power_vs_hr':
             return fetch_power_vs_hr($config, (string) ($args['activity_id'] ?? ''));
+        case 'get_activity_streams':
+            return fetch_activity_streams(
+                $config,
+                (string) ($args['activity_id'] ?? ''),
+                parse_stream_types($args['types'] ?? null),
+                parse_int_param($args['resolution'] ?? null, 'resolution', 1, MAX_STREAM_RESOLUTION),
+                parse_int_param($args['start_sec'] ?? null, 'start_sec', 0, MAX_STREAM_START_SEC),
+                parse_int_param($args['end_sec'] ?? null, 'end_sec', 1, MAX_STREAM_START_SEC)
+            );
         case 'list_wellness':
             return fetch_wellness($config, parse_days($args['days'] ?? null, 14));
     }
@@ -674,6 +871,15 @@ try {
         send_json(200, fetch_activities($config, parse_days($days, 7)));
     } elseif ($requestPath === '/wellness') {
         send_json(200, fetch_wellness($config, parse_days($days, 14)));
+    } elseif (preg_match('#^/activity/([^/]+)/streams$#', $requestPath, $m)) {
+        send_json(200, fetch_activity_streams(
+            $config,
+            rawurldecode($m[1]),
+            parse_stream_types($_GET['types'] ?? null),
+            parse_int_param($_GET['resolution'] ?? null, 'resolution', 1, MAX_STREAM_RESOLUTION),
+            parse_int_param($_GET['start_sec'] ?? null, 'start_sec', 0, MAX_STREAM_START_SEC),
+            parse_int_param($_GET['end_sec'] ?? null, 'end_sec', 1, MAX_STREAM_START_SEC)
+        ));
     } elseif (preg_match('#^/activity/([^/]+)/power-vs-hr$#', $requestPath, $m)) {
         send_json(200, fetch_power_vs_hr($config, rawurldecode($m[1])));
     } elseif (preg_match('#^/activity/([^/]+)$#', $requestPath, $m)) {
