@@ -1,23 +1,16 @@
-// 結果ページのサーバーコンポーネント
-// useSearchParams()を使うResultContentをSuspenseで包む必要がある（Next.js 14の要件）
+import { getResultPageData } from '@/controllers/resultController'
+import { shareSlug } from '@/controllers/shareController'
+import ResultView from '@/views/result/ResultView'
+import ResultErrorView from '@/views/result/ResultErrorView'
 
-import { Suspense } from 'react'
-import ResultContent from './ResultContent'
-
-// ローディング中のフォールバックUI
-function LoadingFallback() {
+export default function ResultPage({ searchParams }: { searchParams: { data?: string; preview?: string; sex?: string } }) {
+  const data = getResultPageData(searchParams)
+  if (data.status !== 'ok') return <ResultErrorView status={data.status} />
   return (
-    <div className="min-h-screen bg-[#0A0A0F] flex flex-col items-center justify-center gap-4">
-      <div className="w-16 h-16 border-4 border-orange-500/30 border-t-orange-500 rounded-full animate-spin" />
-      <p className="text-white/50 text-sm">診断結果を読み込み中...</p>
-    </div>
-  )
-}
-
-export default function ResultPage() {
-  return (
-    <Suspense fallback={<LoadingFallback />}>
-      <ResultContent />
-    </Suspense>
+    <ResultView
+      result={data.result}
+      sharePath={`/c/${shareSlug(data.result.characterId, data.result.sex)}`}
+      isPreview={data.isPreview}
+    />
   )
 }

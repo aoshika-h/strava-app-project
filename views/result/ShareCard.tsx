@@ -4,23 +4,33 @@
 // このコンポーネントがページ最上部に配置され、ヒーローセクションを兼ねる
 
 import { useRef, useState } from 'react'
-import { getGenderText, type CharacterId, type CharacterType } from '@/lib/character'
+import { getVariant, type Character, type CharacterId, type Sex } from '@/models/characters'
 import { gtagEvent } from '@/lib/gtag'
 
 interface Props {
-  character: CharacterType
+  character: Character
   characterId: CharacterId
-  athleteName: string
-  sex: 'male' | 'female'
-  personalityComment?: string | null
+  sex: Sex
+  sharePath: string
 }
 
-export default function ShareCard({ character, characterId, athleteName, sex, personalityComment }: Props) {
+export default function ShareCard({ character, characterId, sex, sharePath }: Props) {
   const imageSrc = `/characters/${characterId}_${sex}.png`
-  const genderText = getGenderText(character, sex)
+  const genderText = getVariant(characterId, sex)
   const cardRef = useRef<HTMLDivElement>(null)
   const [saving, setSaving] = useState(false)
   const isMobileDevice = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0
+
+  const handleShareX = () => {
+    const shareUrl = `${window.location.origin}${sharePath}`
+    const text = `VeloAvaでサイクリストタイプを診断したら「${genderText.name}」（${genderText.title}）だった！\nあなたは何タイプ？\n#VeloAva #ロードバイク`
+    gtagEvent('share_card', { method: 'x' })
+    window.open(
+      `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`,
+      '_blank',
+      'noopener,noreferrer',
+    )
+  }
 
   const handleSave = async () => {
     if (!cardRef.current) return
@@ -43,13 +53,13 @@ export default function ShareCard({ character, characterId, athleteName, sex, pe
           canvas.toBlob((b) => resolve(b!), 'image/png')
         )
         const file = new File([blob], filename, { type: 'image/png' })
-        gtagEvent('share_card', { character_id: characterId, method: 'share' })
+        gtagEvent('share_card', { method: 'share' })
         await navigator.share({ files: [file], title: 'VeloAva キャラクター診断' })
         return
       }
 
       // デスクトップ: PNGダウンロード
-      gtagEvent('share_card', { character_id: characterId, method: 'download' })
+      gtagEvent('share_card', { method: 'download' })
       const link = document.createElement('a')
       link.download = filename
       link.href = canvas.toDataURL('image/png')
@@ -66,7 +76,28 @@ export default function ShareCard({ character, characterId, athleteName, sex, pe
   return (
     <div>
       {/* ダウンロードボタン（カードの上に配置） */}
-      <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '16px' }}>
+        <button
+          onClick={handleShareX}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            backgroundColor: '#000',
+            color: '#fff',
+            fontWeight: 900,
+            fontSize: '15px',
+            padding: '12px 24px',
+            borderRadius: '14px',
+            border: '1px solid rgba(255,255,255,0.25)',
+            cursor: 'pointer',
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+          </svg>
+          でポスト
+        </button>
         <button
           onClick={handleSave}
           disabled={saving}
@@ -188,45 +219,27 @@ export default function ShareCard({ character, characterId, athleteName, sex, pe
             {genderText.catchphrase}
           </div>
 
-          {/* キャラクター説明 / AIコメント */}
-          {personalityComment ? (
-            <div style={{
-              fontSize: '11px',
-              color: 'rgba(255,255,255,0.75)',
-              lineHeight: 1.7,
-              textAlign: 'left',
-              background: `${character.accentColor}18`,
-              border: `1px solid ${character.accentColor}40`,
-              borderRadius: '10px',
-              padding: '10px 12px',
-              marginBottom: '14px',
-            }}>
-              ✨ {personalityComment}
-            </div>
-          ) : (
-            <>
-              <div style={{
-                fontSize: '11px',
-                color: 'rgba(255,255,255,0.65)',
-                lineHeight: 1.7,
-                textAlign: 'left',
-                marginBottom: '10px',
-              }}>
-                {genderText.description}
-              </div>
-              <div style={{
-                fontSize: '10px',
-                color: 'rgba(255,255,255,0.35)',
-                lineHeight: 1.6,
-                textAlign: 'left',
-                borderTop: '1px solid rgba(255,255,255,0.08)',
-                paddingTop: '10px',
-                marginBottom: '14px',
-              }}>
-                📖 {genderText.lore}
-              </div>
-            </>
-          )}
+          {/* キャラクター説明 */}
+          <div style={{
+            fontSize: '11px',
+            color: 'rgba(255,255,255,0.65)',
+            lineHeight: 1.7,
+            textAlign: 'left',
+            marginBottom: '10px',
+          }}>
+            {genderText.description}
+          </div>
+          <div style={{
+            fontSize: '10px',
+            color: 'rgba(255,255,255,0.35)',
+            lineHeight: 1.6,
+            textAlign: 'left',
+            borderTop: '1px solid rgba(255,255,255,0.08)',
+            paddingTop: '10px',
+            marginBottom: '14px',
+          }}>
+            📖 {genderText.lore}
+          </div>
 
           {/* フッター: VeloAvaロゴ */}
           <div style={{

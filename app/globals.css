@@ -20,6 +20,15 @@ body {
   transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* ローディング: 円が左右に往復する */
+@keyframes shuttle {
+  0%, 100% { left: 0; }
+  50% { left: calc(100% - 10px); }
+}
+.loading-shuttle {
+  animation: shuttle 1.2s ease-in-out infinite;
+}
+
 /* スクロールバーのスタイリング */
 ::-webkit-scrollbar {
   width: 6px;
