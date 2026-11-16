@@ -3,9 +3,10 @@
 
 import type { AnalysisResult } from '@/models/analysis'
 import { isCharacterId, type CharacterId, type Sex } from '@/models/characters'
+import { buildInsights } from '@/models/insights'
 
 export type ResultPageData =
-  | { status: 'ok'; result: AnalysisResult; isPreview: boolean }
+  | { status: 'ok'; result: AnalysisResult; insights: string[]; isPreview: boolean }
   | { status: 'missing' }
   | { status: 'invalid' }
 
@@ -30,11 +31,12 @@ export function decodeResult(encoded: string): AnalysisResult | null {
 export function getResultPageData(params: { data?: string; preview?: string; sex?: string }): ResultPageData {
   if (isCharacterId(params.preview)) {
     const sex: Sex = params.sex === 'female' ? 'female' : 'male'
-    return { status: 'ok', result: buildPreviewResult(params.preview, sex), isPreview: true }
+    const result = buildPreviewResult(params.preview, sex)
+    return { status: 'ok', result, insights: buildInsights(result), isPreview: true }
   }
   if (!params.data) return { status: 'missing' }
   const result = decodeResult(params.data)
-  return result ? { status: 'ok', result, isPreview: false } : { status: 'invalid' }
+  return result ? { status: 'ok', result, insights: buildInsights(result), isPreview: false } : { status: 'invalid' }
 }
 
 function buildPreviewResult(characterId: CharacterId, sex: Sex): AnalysisResult {

@@ -55,7 +55,7 @@ Stravaアプリの **Authorization Callback Domain** は `vercel.app` に設定�
                  ├─ models/analysis: analyzeCharacter()
                  └─ resultController.encodeResult() → /result?data=...
                       └─ app/result/page.tsx（サーバー）→ resultController.getResultPageData()
-                           └─ views/result/ResultView → ShareCard / EvolutionCard / RadarChart
+                           └─ views/result/ResultView → ShareCard / InsightsCard / EvolutionCard / RadarChart
 ```
 
 ### セッションレス設計
@@ -84,6 +84,10 @@ Stravaアプリの **Authorization Callback Domain** は `vercel.app` に設定�
 ### AI機能は使わない
 
 Strava API Policy 5.3条により、Strava Data（APIで取得した全データと、そこから派生した統計・スコア・診断結果を含む）をAIに渡すこと（コンテキストへの投入を含む）は禁止されている。以前あったAI性格コメント機能はこのため削除した。Stravaから来たデータやその派生データを、LLMなどのAIサービスに送る機能は追加しない。
+
+### ライドの一言コメント (`models/insights.ts`)
+
+`buildInsights()` が統計・スコアから「富士山○個分」「週○回、継続の鬼」のようなコメントをルールで組み立て、重みの高い順に別カテゴリから最大3つ選ぶ（`resultController` で生成し `views/result/InsightsCard.tsx` が表示）。`buildChangeInsights()` はブラウザに保存した前回のキャラ・スコアとの差分コメントを作り、`EvolutionCard` に出す。AIは使わない。数値を含むため結果ページの本人向け表示に限り、シェアカード・OGP画像には載せない。新しいコメントは `RULES` に関数を1つ足せば増やせる。
 
 ### シェアカード (`views/result/ShareCard.tsx`)
 

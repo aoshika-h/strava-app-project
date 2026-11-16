@@ -1,4 +1,4 @@
-import type { AnalysisResult } from '@/models/analysis'
+import type { AnalysisResult } from './analysis'
 
 export const SCORE_AXES: { label: string; key: keyof AnalysisResult['scores'] }[] = [
   { label: '登坂力', key: 'climbing' },

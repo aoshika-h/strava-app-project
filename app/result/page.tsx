@@ -9,6 +9,7 @@ export default function ResultPage({ searchParams }: { searchParams: { data?: st
   return (
     <ResultView
       result={data.result}
+      insights={data.insights}
       sharePath={`/c/${shareSlug(data.result.characterId, data.result.sex)}`}
       isPreview={data.isPreview}
     />

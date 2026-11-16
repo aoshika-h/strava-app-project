@@ -1,5 +1,5 @@
 import type { AnalysisResult } from '@/models/analysis'
-import { SCORE_AXES } from './scoreAxes'
+import { SCORE_AXES } from '@/models/scoreAxes'
 
 export default function RadarChart({ scores, color }: { scores: AnalysisResult['scores']; color: string }) {
   const size = 220

@@ -9,14 +9,17 @@ import { loadLastResult, saveLastResult, type StoredResult } from '@/models/resu
 import ShareCard from './ShareCard'
 import EvolutionCard from './EvolutionCard'
 import RadarChart from './RadarChart'
-import { SCORE_AXES } from './scoreAxes'
+import InsightsCard from './InsightsCard'
+import { SCORE_AXES } from '@/models/scoreAxes'
 
 export default function ResultView({
   result,
+  insights,
   sharePath,
   isPreview = false,
 }: {
   result: AnalysisResult
+  insights: string[]
   sharePath: string
   isPreview?: boolean
 }) {
@@ -50,6 +53,9 @@ export default function ResultView({
           sex={result.sex}
           sharePath={sharePath}
         />
+
+        {/* ライドの数値から組み立てた一言コメント（本人だけに表示） */}
+        <InsightsCard insights={insights} accentColor={character.accentColor} />
 
         {/* キャラクター変化（前回診断がある場合のみ表示） */}
         {prevResult && <EvolutionCard prev={prevResult} current={result} />}

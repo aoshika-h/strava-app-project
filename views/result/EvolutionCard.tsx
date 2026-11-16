@@ -3,7 +3,8 @@
 import type { AnalysisResult } from '@/models/analysis'
 import { getCharacter, getVariant } from '@/models/characters'
 import type { StoredResult } from '@/models/resultHistory'
-import { SCORE_AXES } from './scoreAxes'
+import { buildChangeInsights } from '@/models/insights'
+import { SCORE_AXES } from '@/models/scoreAxes'
 
 function formatDate(iso: string): string {
   const d = new Date(iso)
@@ -67,6 +68,10 @@ export default function EvolutionCard({ prev, current }: { prev: StoredResult; c
             )
           })}
         </div>
+
+        {buildChangeInsights(prev, current).map((line) => (
+          <p key={line} className="mt-4 text-sm text-white/70 text-center">{line}</p>
+        ))}
 
         <div className="text-center mt-4 text-xs text-white/20">
           前回の診断: {formatDate(prev.date)}
