@@ -29,7 +29,7 @@ export default function ResultView({
 
   useEffect(() => {
     if (isPreview) return
-    setPrevResult(loadLastResult())
+    setPrevResult(loadLastResult(result.stats.periodDays))
     saveLastResult(result)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -70,7 +70,7 @@ export default function ResultView({
               { label: '平均速度', value: `${stats.avgSpeedKmh} km/h`, icon: '⚡' },
               { label: '総獲得標高', value: `${stats.totalElevationM.toLocaleString()} m`, icon: '🏔️' },
               { label: '山岳比率', value: `${stats.climbingRatioMPerKm} m/km`, icon: '📈' },
-              { label: '週頻度', value: `${stats.ridesPerWeek} 回/週`, icon: '📅' },
+              { label: '乗った日数', value: `週${stats.ridingDaysPerWeek}日`, icon: '📅' },
               ...(stats.avgWatts > 0 ? [{ label: '平均パワー', value: `${stats.avgWatts} W`, icon: '💪' }] : []),
             ].map((item) => (
               <div key={item.label} className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">

@@ -49,7 +49,7 @@ export async function handleCallback(request: NextRequest): Promise<NextResponse
     const { access_token, refresh_token, athlete } = await exchangeCode(code)
     const since = Math.floor(Date.now() / 1000) - periodDays * 24 * 60 * 60
     // 診断は1回きりでトークンを使い続けないため、取得し終えたら成否に関わらず連携を解除する
-    const activities = await getActivities(access_token, since, 200).finally(() => revokeToken(refresh_token))
+    const activities = await getActivities(access_token, since).finally(() => revokeToken(refresh_token))
 
     const result = analyzeCharacter(activities, athlete, periodDays)
 

@@ -20,7 +20,8 @@ export interface StravaActivity {
   weighted_average_watts?: number  // NP（Normalized Power）
   average_heartrate?: number
   max_heartrate?: number
-  start_date: string    // ISO 8601形式
+  start_date: string    // ISO 8601形式（UTC）
+  start_date_local: string  // 現地時刻（日付単位の集計に使う）
   suffer_score?: number  // Stravaの運動負荷スコア
   kilojoules?: number   // 消費エネルギー
 }
@@ -76,28 +77,27 @@ export async function exchangeCode(code: string): Promise<StravaTokenResponse> {
   return res.json()
 }
 
-// 直近のアクティビティ一覧を取得する
-// after: UNIXタイムスタンプ（この日時以降のアクティビティを取得）
-// perPage: 1回で取得する件数（最大200）
-export async function getActivities(
-  accessToken: string,
-  after: number,
-  perPage = 100
-): Promise<StravaActivity[]> {
-  const params = new URLSearchParams({
-    per_page: String(perPage),
-    after: String(after),
-  })
+const PER_PAGE = 200
+// レート制限（読み取り300回/15分）を1人で使い切らないための上限。1,000件/期間あれば1年分でも足りる
+const MAX_PAGES = 5
 
-  const res = await fetch(`${STRAVA_API_BASE}/athlete/activities?${params}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  })
-
-  if (!res.ok) {
-    throw new Error(`アクティビティ取得失敗: ${res.status}`)
+// 指定日時以降のアクティビティを全件取得する（1ページ200件まで。ページを進めて期間内をすべて集める）
+// after: UNIXタイムスタンプ
+export async function getActivities(accessToken: string, after: number): Promise<StravaActivity[]> {
+  const all: StravaActivity[] = []
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const params = new URLSearchParams({ per_page: String(PER_PAGE), after: String(after), page: String(page) })
+    const res = await fetch(`${STRAVA_API_BASE}/athlete/activities?${params}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!res.ok) {
+      throw new Error(`アクティビティ取得失敗: ${res.status}`)
+    }
+    const batch: StravaActivity[] = await res.json()
+    all.push(...batch)
+    if (batch.length < PER_PAGE) break
   }
-
-  return res.json()
+  return all
 }
 
 // アプリの連携を解除する（アクセス/リフレッシュ両方のトークンが無効になり、接続アスリート枠も空く）

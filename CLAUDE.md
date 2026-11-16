@@ -89,6 +89,11 @@ Strava API Policy 5.3条により、Strava Data（APIで取得した全データ
 
 `buildInsights()` が統計・スコアから「富士山○個分」「週○回、継続の鬼」のようなコメントをルールで組み立て、重みの高い順に別カテゴリから最大3つ選ぶ（`resultController` で生成し `views/result/InsightsCard.tsx` が表示）。`buildChangeInsights()` はブラウザに保存した前回のキャラ・スコアとの差分コメントを作り、`EvolutionCard` に出す。AIは使わない。数値を含むため結果ページの本人向け表示に限り、シェアカード・OGP画像には載せない。新しいコメントは `RULES` に関数を1つ足せば増やせる。
 
+### 頻度と前回比較の注意点
+
+- 頻度は「週あたりの乗った日数」（`ridingDaysPerWeek`、`start_date_local` の日付で数える）。Zwiftなど屋内ライドや1回の外出の分割で件数が膨らむため、アクティビティ件数では数えない。旧URLの `ridesPerWeek` は `resultController.decodeResult` で読み替える
+- 前回結果（`models/resultHistory.ts`）は分析期間ごとに1件ずつ保存し、同じ期間どうしでのみ比較する。期間が違う診断を比べると数値が大きくぶれるため
+
 ### シェアカード (`views/result/ShareCard.tsx`)
 
 `html2canvas` でDOMをキャプチャして画像化する。Tailwindクラスはキャプチャ時に取りこぼすため、カード内のスタイルはすべてinline styleで記述する（Tailwindクラスはカード外のUIにのみ使用）。
@@ -107,10 +112,10 @@ Strava API Policy 5.3条により、Strava Data（APIで取得した全データ
 ## Strava API の制約
 
 - 本番アクセス承認済み（2026年11月）。接続アスリート数は**999人上限**。超過時は `exchangeCode()` が `err.code === 'athlete_limit'` エラーを投げ、トップページに `?error=athlete_limit` でリダイレクトされる。
-- レート制限: 全体 600リクエスト/15分・6,000/日、読み取り 300/15分・3,000/日。1診断あたりのAPI呼び出しはアクティビティ取得1回。
+- レート制限: 全体 600リクエスト/15分・6,000/日、読み取り 300/15分・3,000/日。1診断あたりのAPI呼び出しはアクティビティ取得が200件ごとに1回（`models/strava.ts` の `MAX_PAGES` で最大5回）。
 - スコープ: `read,activity:read_all`
 - 診断は1回きりの用途なので、アクティビティ取得後に成否に関わらず `revokeToken()`（`POST /oauth/revoke`）で連携を解除し、接続アスリート枠を空ける。旧 `/oauth/deauthorize` は2027-06-01で廃止されるため使わない
-- アクティビティ取得: 最大200件/リクエスト（ページネーションは未実装）
+- アクティビティ取得: 最大200件/リクエスト。期間内の全件をページングで取得する（1年で200件を超える人が普通にいるため）
 
 ## デプロイ
 

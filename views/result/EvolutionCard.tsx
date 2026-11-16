@@ -11,6 +11,10 @@ function formatDate(iso: string): string {
   return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`
 }
 
+function periodLabel(days: number): string {
+  return days >= 365 ? '1年' : `${Math.round(days / 30)}ヶ月`
+}
+
 export default function EvolutionCard({ prev, current }: { prev: StoredResult; current: AnalysisResult }) {
   const prevChar = getCharacter(prev.characterId)
   const prevName = getVariant(prev.characterId, current.sex).name
@@ -74,7 +78,7 @@ export default function EvolutionCard({ prev, current }: { prev: StoredResult; c
         ))}
 
         <div className="text-center mt-4 text-xs text-white/20">
-          前回の診断: {formatDate(prev.date)}
+          前回の{periodLabel(prev.periodDays)}診断: {formatDate(prev.date)}
         </div>
       </div>
     </div>

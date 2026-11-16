@@ -17,7 +17,7 @@ export interface AnalysisResult {
     totalElevationM: number     // 合計獲得標高 (m)
     avgSpeedKmh: number         // 平均速度 (km/h)
     climbingRatioMPerKm: number // 獲得標高比率 (m/km)
-    ridesPerWeek: number        // 週あたりライド数
+    ridingDaysPerWeek: number   // 週あたりの乗った日数（1日に複数アクティビティがあっても1日）
     avgWatts: number            // 平均パワー (ワット、0=データなし)
     periodDays: number          // 分析期間 (日)
   }
@@ -72,9 +72,9 @@ export function analyzeCharacter(
   // 平均距離 (km)
   const avgDistance = totalDistKm / rides.length
 
-  // 週あたりライド数
-  const weeksInPeriod = periodDays / 7
-  const ridesPerWeek = rides.length / weeksInPeriod
+  // 週あたりの乗った日数（屋内ライドやアクティビティ分割で件数が膨らむため、日付単位で数える）
+  const ridingDays = new Set(rides.map((r) => r.start_date_local.slice(0, 10))).size
+  const ridingDaysPerWeek = ridingDays / (periodDays / 7)
 
   // パワーデータ（パワーメーターがある場合のみ）
   const powerRides = rides.filter((r) => r.average_watts && r.average_watts > 50)
@@ -91,7 +91,7 @@ export function analyzeCharacter(
     speed: normalize(avgSpeed, 18, 42),            // 18〜42 km/h
     endurance: normalize(avgDistance, 20, 150),    // 20〜150 km
     power: avgWatts > 0 ? normalize(avgWatts, 100, 350) : normalize(avgSpeed, 20, 40), // パワーがなければ速度で代替
-    consistency: normalize(ridesPerWeek, 0.5, 7), // 週0.5〜7回
+    consistency: normalize(ridingDaysPerWeek, 0.5, 7), // 週0.5〜7日
   }
 
   // ---- キャラクタータイプの判定 ----
@@ -129,11 +129,11 @@ export function analyzeCharacter(
   charScores.sprinter   += shortBias * 1.0
 
   // 頻度の低さ → サンデーライダーに加点（頻度が低いほど高スコア）
-  const lowFreqScore = normalize(3 - ridesPerWeek, -4, 3)
+  const lowFreqScore = normalize(3 - ridingDaysPerWeek, -4, 3)
   charScores.weekend    += lowFreqScore * 2.0
 
   // 頻度の高さ → オールラウンダー・TTに加点
-  const freqScore = normalize(ridesPerWeek, 0.5, 7)
+  const freqScore = normalize(ridingDaysPerWeek, 0.5, 7)
   charScores.allrounder += freqScore * 1.0
   charScores.tt         += freqScore * 0.5
 
@@ -158,7 +158,7 @@ export function analyzeCharacter(
       totalElevationM: Math.round(totalElev),
       avgSpeedKmh: Math.round(avgSpeed * 10) / 10,
       climbingRatioMPerKm: Math.round(climbingRatio * 10) / 10,
-      ridesPerWeek: Math.round(ridesPerWeek * 10) / 10,
+      ridingDaysPerWeek: Math.round(ridingDaysPerWeek * 10) / 10,
       avgWatts: Math.round(avgWatts),
     },
     periodDays,
@@ -186,7 +186,7 @@ function buildResult(
       totalElevationM: 0,
       avgSpeedKmh: 0,
       climbingRatioMPerKm: 0,
-      ridesPerWeek: 0,
+      ridingDaysPerWeek: 0,
       avgWatts: 0,
       periodDays,
       ...partialStats,

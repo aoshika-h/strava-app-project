@@ -42,10 +42,10 @@ const RULES: ((s: Stats, sc: Scores) => Insight | null)[] = [
   },
   // 頻度
   (s) => {
-    const w = s.ridesPerWeek
-    if (w >= 5) return { category: 'frequency', weight: 90, text: `週${fmt(w, 1)}回。ほぼ毎日乗っている、継続の鬼` }
-    if (w >= 3) return { category: 'frequency', weight: 55, text: `週${fmt(w, 1)}回。乗ることがしっかり習慣になっている` }
-    if (w > 0 && w < 1) return { category: 'frequency', weight: 50, text: `週${fmt(w, 1)}回。乗りたい日に乗る、マイペースな楽しみ方` }
+    const w = s.ridingDaysPerWeek
+    if (w >= 5) return { category: 'frequency', weight: 90, text: `週${fmt(w, 1)}日。ほぼ毎日乗っている、継続の鬼` }
+    if (w >= 3) return { category: 'frequency', weight: 55, text: `週${fmt(w, 1)}日。乗ることがしっかり習慣になっている` }
+    if (w > 0 && w < 1) return { category: 'frequency', weight: 50, text: `週${fmt(w, 1)}日。乗りたい日に乗る、マイペースな楽しみ方` }
     return null
   },
   // 1回あたりの距離

@@ -40,7 +40,7 @@ export default function PrivacyView() {
 
         <Section title="3. データの保存について">
           <p>VeloAvaはStravaから取得したアクティビティデータをサーバーに保存しません。診断結果はURLパラメータとしてブラウザ側にのみ存在し、セッション終了とともに消滅します。</p>
-          <p>なお、前回の診断結果との比較機能のため、直近の診断結果（キャラクタータイプ・スコア・日付）をお使いのブラウザのlocalStorageに保存します。この情報はサーバーに送信されず、ブラウザ内にのみ存在します。</p>
+          <p>なお、前回の診断結果との比較機能のため、分析期間ごとの直近の診断結果（キャラクタータイプ・スコア・分析期間・日付）をお使いのブラウザのlocalStorageに保存します。この情報はサーバーに送信されず、ブラウザ内にのみ存在します。</p>
         </Section>
 
         <Section title="4. 第三者サービスへのデータ送信">
@@ -73,7 +73,7 @@ export default function PrivacyView() {
             </div>
             <div>
               <h3 className="text-white/70 font-bold mb-1">Data Storage</h3>
-              <p>VeloAva does NOT store any Strava data on our servers. Diagnosis results exist only as URL parameters in your browser and are discarded after use. Only a minimal summary of your last result (character type, scores, date) is saved in your browser&apos;s localStorage for the evolution comparison feature — this data never leaves your device.</p>
+              <p>VeloAva does NOT store any Strava data on our servers. Diagnosis results exist only as URL parameters in your browser and are discarded after use. Only a minimal summary of your last result for each analysis period (character type, scores, period, date) is saved in your browser&apos;s localStorage for the evolution comparison feature — this data never leaves your device.</p>
             </div>
             <div>
               <h3 className="text-white/70 font-bold mb-1">Third-Party Services</h3>

@@ -21,7 +21,10 @@ export function decodeResult(encoded: string): AnalysisResult | null {
       Buffer.from(encoded, 'base64url').toString('utf8'),
     ) as AnalysisResult
     if (!isCharacterId(characterId)) return null
-    return { characterId, athleteName, profileImageUrl, sex, stats, scores }
+    // 旧URLは週あたり「ライド件数」(ridesPerWeek) を持つ。件数で近似して表示を崩さない
+    const legacy = stats as AnalysisResult['stats'] & { ridesPerWeek?: number }
+    const ridingDaysPerWeek = legacy.ridingDaysPerWeek ?? legacy.ridesPerWeek ?? 0
+    return { characterId, athleteName, profileImageUrl, sex, stats: { ...stats, ridingDaysPerWeek }, scores }
   } catch {
     return null
   }
@@ -52,7 +55,7 @@ function buildPreviewResult(characterId: CharacterId, sex: Sex): AnalysisResult 
       totalElevationM: 18500,
       avgSpeedKmh: 28.5,
       climbingRatioMPerKm: 6.8,
-      ridesPerWeek: 3.5,
+      ridingDaysPerWeek: 3.5,
       avgWatts: 210,
       periodDays: 90,
     },
