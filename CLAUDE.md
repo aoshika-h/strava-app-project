@@ -105,6 +105,21 @@ Strava API Policy 5.3条により、Strava Data（APIで取得した全データ
 
 結果ページの「Xでポスト」ボタンは `/c/{characterId}_{sex}` をintent URLで投稿する。`shareController.createShareOgImage()` が `next/og` でキャラ別OGP画像（レイアウトは `views/share/OgImageView.tsx`）を生成し、Xのタイムラインに画像付きカードを出す。キャラ画像はfsで読むため `next.config.mjs` の `outputFileTracingIncludes` で関数にバンドルしている。日本語フォントはGoogle FontsからNoto Sans JPを必要文字だけ取得する。
 
+### GA4 計測
+
+`NEXT_PUBLIC_GA_ID` が設定されているときだけ送信する（`lib/gtag.ts`）。クリック計測は、ハンドラを持つボタンは `gtagEvent()` を直接呼び、それ以外のリンクは要素に `data-ga-event`（と任意で `data-ga-id`）を付ければ `views/common/ClickTracker.tsx` が拾う。
+
+| イベント | 発生箇所 | パラメータ |
+|---|---|---|
+| `diagnosis_start` | トップの期間ボタン | `period` |
+| `share_x` | 結果ページの「Xでポスト」（GA側でキーイベント＝CVに設定） | なし |
+| `share_card` | 結果ページの保存・共有ボタン | `method` = share / download |
+| `retry_diagnosis` | 結果ページの「もう一度診断する」 | なし |
+| `share_page_cta` | キャラ紹介ページ（`/c/...`）の「あなたも診断する」 | なし |
+| `ui_click` | その他のリンク | `button_id` |
+
+診断結果のキャラや性別などStrava由来のデータはイベントにもユーザープロパティにも載せない（API Policy 5.4）。
+
 ### プレビューモード
 
 `/result?preview=climber&sex=female` のようにURLパラメータを指定するとモックデータで結果ページをテスト表示できる（`?data=` より優先）。キャラクターID: `climber | sprinter | tt | granfondo | allrounder | weekend`。

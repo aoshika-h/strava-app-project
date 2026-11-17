@@ -28,6 +28,7 @@ export default function SharePageView({ characterId, sex, character, variant }: 
         <p className="text-sm text-white/60 mb-10">{variant.catchphrase}</p>
 
         <Link
+          data-ga-event="share_page_cta"
           href="/"
           className="inline-block font-black px-8 py-4 rounded-2xl text-white transition-transform hover:-translate-y-0.5"
           style={{ backgroundColor: '#FC4C02', boxShadow: '0 4px 24px #FC4C0255' }}

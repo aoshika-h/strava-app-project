@@ -24,7 +24,7 @@ export default function ShareCard({ character, characterId, sex, sharePath }: Pr
   const handleShareX = () => {
     const shareUrl = `${window.location.origin}${sharePath}`
     const text = `VeloAvaでサイクリストタイプを診断したら「${genderText.name}」（${genderText.title}）だった！\nあなたは何タイプ？\n#VeloAva #ロードバイク`
-    gtagEvent('share_card', { method: 'x' })
+    gtagEvent('share_x')
     window.open(
       `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`,
       '_blank',

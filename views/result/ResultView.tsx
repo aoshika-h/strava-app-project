@@ -153,6 +153,7 @@ export default function ResultView({
         {/* もう一度診断 */}
         <div className="text-center pt-2">
           <Link
+            data-ga-event="retry_diagnosis"
             href="/"
             className="inline-flex items-center gap-2 bg-white/8 hover:bg-white/12 border border-white/10 text-white/70 hover:text-white font-medium px-8 py-3 rounded-xl transition-colors text-sm"
           >

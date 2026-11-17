@@ -7,7 +7,7 @@ export default function ResultErrorView({ status }: { status: 'missing' | 'inval
         <p className="text-white/50 mb-4">
           {status === 'missing' ? '診断データが見つかりません' : 'データの読み込みに失敗しました'}
         </p>
-        <Link href="/" className="text-orange-400 hover:underline">
+        <Link href="/" data-ga-event="ui_click" data-ga-id="error_back_to_top" className="text-orange-400 hover:underline">
           {status === 'missing' ? 'トップに戻る' : 'もう一度診断する'}
         </Link>
       </div>

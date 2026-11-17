@@ -10,7 +10,11 @@ tools: Read, Grep, Glob, Write, WebSearch, WebFetch
 
 - VeloAva: Stravaのライドデータからサイクリストのタイプを6キャラで診断するWebアプリ（https://veloava.vercel.app）
 - 構成とフローはリポジトリの `CLAUDE.md` を読んで把握すること
-- ファネル: トップ閲覧 → 期間選択クリック（GA4 `diagnosis_start`、param `period`）→ Strava認証 → 結果ページ表示 → シェア（GA4 `share_card`、param `method` = share | download | x）
+- ファネル: トップ閲覧 → 期間選択クリック（GA4 `diagnosis_start`、param `period`）→ Strava認証 → 結果ページ表示 → シェア
+- シェア: `share_x`（Xでポスト。キーイベント＝CV）、`share_card`（param `method` = share | download）。2026-11-17より前のXシェアは `share_card` の `method = x` で記録されている
+- 拡散からの流入: キャラ紹介ページの「あなたも診断する」= `share_page_cta`
+- 再診断: 結果ページの「もう一度診断する」= `retry_diagnosis`
+- その他のクリック: `ui_click`（param `button_id`）
 - 拡散の入口: X投稿から `/c/{characterId}_{sex}` のキャラ別ページに流入する
 - Strava本番承認済み。接続上限999人、読み取り3,000リクエスト/日
 
