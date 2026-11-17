@@ -4,12 +4,14 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import type { AnalysisResult } from '@/models/analysis'
-import { getCharacter } from '@/models/characters'
+import { getCharacter, type CharacterId } from '@/models/characters'
 import { loadLastResult, saveLastResult, type StoredResult } from '@/models/resultHistory'
 import ShareCard from './ShareCard'
 import EvolutionCard from './EvolutionCard'
 import RadarChart from './RadarChart'
 import InsightsCard from './InsightsCard'
+import PredictionReveal from './PredictionReveal'
+import { takePrediction } from '@/models/prediction'
 import { SCORE_AXES } from '@/models/scoreAxes'
 
 export default function ResultView({
@@ -26,9 +28,11 @@ export default function ResultView({
   const character = getCharacter(result.characterId)
   const { stats, scores } = result
   const [prevResult, setPrevResult] = useState<StoredResult | null>(null)
+  const [predicted, setPredicted] = useState<CharacterId | null>(null)
 
   useEffect(() => {
     if (isPreview) return
+    setPredicted(takePrediction())
     setPrevResult(loadLastResult(result.stats.periodDays))
     saveLastResult(result)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -46,7 +50,10 @@ export default function ResultView({
 
       <div className="max-w-2xl mx-auto px-6 pt-8 pb-16 space-y-6">
 
-        {/* シェアカード（ページ最上部） */}
+        {/* 診断前の予想との答え合わせ（予想した場合のみ） */}
+        {predicted && <PredictionReveal predicted={predicted} actual={result.characterId} />}
+
+        {/* シェアカード */}
         <ShareCard
           character={character}
           characterId={result.characterId}

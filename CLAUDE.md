@@ -48,7 +48,7 @@ Stravaアプリの **Authorization Callback Domain** は `vercel.app` に設定�
 
 ```
 / (app/page.tsx → views/home/HomeView)
-  └─ 期間選択（views/home/PeriodButtons）→ /api/auth/strava?period=90|180|365
+  └─ ① タイプ予想 → ② 期間選択（views/home/DiagnosisStarter → PeriodButtons）→ /api/auth/strava?period=90|180|365
        └─ authController.startAuthorization: Strava OAuth（stateで期間を引き渡す）
             └─ /api/auth/callback → authController.handleCallback
                  ├─ models/strava: exchangeCode() / getActivities() → revokeToken()（連携解除）
@@ -111,14 +111,16 @@ Strava API Policy 5.3条により、Strava Data（APIで取得した全データ
 
 | イベント | 発生箇所 | パラメータ |
 |---|---|---|
-| `diagnosis_start` | トップの期間ボタン | `period` |
+| `diagnosis_start` | トップの期間ボタン | `period`, `predicted_type` |
 | `share_x` | 結果ページの「Xでポスト」（GA側でキーイベント＝CVに設定） | なし |
 | `share_card` | 結果ページの保存・共有ボタン | `method` = share / download |
 | `retry_diagnosis` | 結果ページの「もう一度診断する」 | なし |
 | `share_page_cta` | キャラ紹介ページ（`/c/...`）の「あなたも診断する」 | なし |
 | `ui_click` | その他のリンク | `button_id` |
 
-診断結果のキャラや性別などStrava由来のデータはイベントにもユーザープロパティにも載せない（API Policy 5.4）。
+ユーザープロパティ `predicted_type`（ユーザー単位のカスタムディメンション）には、診断前にユーザーが選んだ予想タイプ（6キャラのID または `unknown`）を送る。ユーザー自身の入力なのでStrava由来ではない。
+
+診断結果のキャラや性別などStrava由来のデータはイベントにもユーザープロパティにも載せない（API Policy 5.4）。予想と結果の一致/不一致も結果を含むので送らない。予想は `models/prediction.ts` でlocalStorageに保存し、結果ページの `PredictionReveal` で一度だけ答え合わせして消す。
 
 ### プレビューモード
 

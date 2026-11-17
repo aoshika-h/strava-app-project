@@ -40,13 +40,13 @@ export default function PrivacyView() {
 
         <Section title="3. データの保存について">
           <p>VeloAvaはStravaから取得したアクティビティデータをサーバーに保存しません。診断結果はURLパラメータとしてブラウザ側にのみ存在し、セッション終了とともに消滅します。</p>
-          <p>なお、前回の診断結果との比較機能のため、分析期間ごとの直近の診断結果（キャラクタータイプ・スコア・分析期間・日付）をお使いのブラウザのlocalStorageに保存します。この情報はサーバーに送信されず、ブラウザ内にのみ存在します。</p>
+          <p>なお、前回の診断結果との比較機能のため、分析期間ごとの直近の診断結果（キャラクタータイプ・スコア・分析期間・日付）をお使いのブラウザのlocalStorageに保存します。この情報はサーバーに送信されず、ブラウザ内にのみ存在します。診断前に選んだ「予想タイプ」も答え合わせのため一時的にブラウザに保存し、結果の表示後に削除します。</p>
         </Section>
 
         <Section title="4. 第三者サービスへのデータ送信">
           <p>以下の外部サービスにデータを送信します。</p>
           <ul className="list-disc list-inside space-y-1 mt-2">
-            <li><span className="text-white/70 font-medium">Google Analytics</span> — 匿名の利用統計（ページビュー、クリックイベント）を収集します。個人を特定する情報は含まれません。</li>
+            <li><span className="text-white/70 font-medium">Google Analytics</span> — 匿名の利用統計（ページビュー、クリックイベント、診断前に選んだ予想タイプ）を収集します。個人を特定する情報やStravaのデータは含まれません。</li>
           </ul>
           <p className="mt-2">Stravaから取得したデータを第三者（AIサービスを含む）に提供することはありません。</p>
         </Section>
@@ -77,7 +77,7 @@ export default function PrivacyView() {
             </div>
             <div>
               <h3 className="text-white/70 font-bold mb-1">Third-Party Services</h3>
-              <p>Anonymous usage statistics are collected via Google Analytics. No Strava data is sold or shared with any third party, including AI services.</p>
+              <p>Anonymous usage statistics (page views, clicks, and the type you guessed before the diagnosis) are collected via Google Analytics; they contain no Strava data. No Strava data is sold or shared with any third party, including AI services.</p>
             </div>
             <div>
               <h3 className="text-white/70 font-bold mb-1">Strava API Usage</h3>

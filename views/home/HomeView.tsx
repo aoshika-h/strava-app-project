@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import PeriodButtons from './PeriodButtons'
+import DiagnosisStarter from './DiagnosisStarter'
 import { listCharacters } from '@/models/characters'
 
 // URLパラメータのエラーメッセージマッピング
@@ -51,11 +51,8 @@ export default function HomeView({ errorCode }: { errorCode?: string }) {
             </div>
           )}
 
-          {/* 期間選択 + Strava連携ボタン */}
-          <div className="flex flex-col items-center gap-4">
-            <p className="text-sm text-white/50">分析する期間を選択</p>
-            <PeriodButtons />
-          </div>
+          {/* タイプ予想 → 期間選択（Strava連携） */}
+          <DiagnosisStarter />
 
           <p className="mt-2 text-xs text-white/30">
             ライドデータの読み取り権限のみ取得します。投稿・変更は一切行いません。
