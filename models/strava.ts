@@ -5,7 +5,8 @@ const STRAVA_API_BASE = 'https://www.strava.com/api/v3'
 
 // Stravaのアクティビティデータ型（必要な項目のみ定義）
 export interface StravaActivity {
-  id: number
+  // 2027-06-01以降 id は64bit整数になりJSの number では精度が落ちるため、IDは文字列の id_str を使う
+  id_str: string
   name: string
   type: string          // 'Ride', 'VirtualRide', 'Run' など
   sport_type: string
@@ -28,7 +29,7 @@ export interface StravaActivity {
 
 // アスリートプロフィール型
 export interface StravaAthlete {
-  id: number
+  id_str: string  // StravaActivity と同じ理由で id ではなく id_str を使う
   firstname: string
   lastname: string
   username: string
