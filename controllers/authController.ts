@@ -24,7 +24,8 @@ export function startAuthorization(request: NextRequest): NextResponse {
   authUrl.searchParams.set('redirect_uri', `${origin}/api/auth/callback`)
   authUrl.searchParams.set('response_type', 'code')
   authUrl.searchParams.set('approval_prompt', 'auto')
-  authUrl.searchParams.set('scope', 'read,activity:read_all')
+  // 非公開（自分のみ）のアクティビティやプライバシーゾーンは診断に不要なので read_all は求めない
+  authUrl.searchParams.set('scope', 'read,activity:read')
   // 期間をstateパラメータでコールバックに引き渡す
   authUrl.searchParams.set('state', safePeriod)
 

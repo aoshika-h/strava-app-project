@@ -54,9 +54,22 @@ export default function HomeView({ errorCode }: { errorCode?: string }) {
           {/* タイプ予想 → 期間選択（Strava連携） */}
           <DiagnosisStarter />
 
-          <p className="mt-2 text-xs text-white/30">
-            ライドデータの読み取り権限のみ取得します。投稿・変更は一切行いません。
-          </p>
+          {/* 連携をためらう人向けの安心材料 */}
+          <ul className="mt-8 mx-auto max-w-md space-y-2 text-left text-sm text-white/60">
+            {[
+              { icon: '🔒', text: 'ライドデータはサーバーに保存しません' },
+              { icon: '🔌', text: '診断が終わると Strava との連携を自動で解除します（Stravaの「設定 → 連携アプリ」から消えていることを確認できます）' },
+              { icon: '👀', text: '読み取りのみ。投稿・変更は一切しません。「自分のみ」にしている非公開アクティビティも読みません' },
+            ].map((item) => (
+              <li key={item.icon} className="flex gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+                <span aria-hidden>{item.icon}</span>
+                <span>{item.text}</span>
+              </li>
+            ))}
+          </ul>
+          <Link href="/privacy" data-ga-event="ui_click" data-ga-id="trust_privacy_link" className="mt-3 inline-block text-xs text-white/40 underline underline-offset-2 hover:text-white/70">
+            プライバシーポリシーを読む
+          </Link>
         </div>
       </div>
 
@@ -109,7 +122,7 @@ export default function HomeView({ errorCode }: { errorCode?: string }) {
             {
               icon: '📊',
               title: 'ライドデータ分析',
-              desc: '直近90日間のライドデータ（距離・獲得標高・速度・パワー）を自動分析。',
+              desc: '選んだ期間（3ヶ月・6ヶ月・1年）のライドデータ（距離・獲得標高・速度・パワー）を自動分析。',
             },
             {
               icon: '🎉',
