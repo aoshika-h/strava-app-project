@@ -48,14 +48,14 @@ Stravaアプリの **Authorization Callback Domain** は `vercel.app` に設定�
 
 ```
 / (app/page.tsx → views/home/HomeView)
-  └─ 期間選択（views/home/PeriodButtons）→ /api/auth/strava?period=90|180|365
+  └─ ① タイプ予想 → ② 期間選択（views/home/DiagnosisStarter → PeriodButtons）→ /api/auth/strava?period=90|180|365
        └─ authController.startAuthorization: Strava OAuth（stateで期間を引き渡す）
             └─ /api/auth/callback → authController.handleCallback
                  ├─ models/strava: exchangeCode() / getActivities() → revokeToken()（連携解除）
                  ├─ models/analysis: analyzeCharacter()
                  └─ resultController.encodeResult() → /result?data=...
                       └─ app/result/page.tsx（サーバー）→ resultController.getResultPageData()
-                           └─ views/result/ResultView → ShareCard / EvolutionCard / RadarChart
+                           └─ views/result/ResultView → ShareCard / InsightsCard / EvolutionCard / RadarChart
 ```
 
 ### セッションレス設計
@@ -64,14 +64,18 @@ Stravaアプリの **Authorization Callback Domain** は `vercel.app` に設定�
 
 ### キャラクター判定ロジック (`models/analysis.ts`)
 
-`analyzeCharacter()` がStravaアクティビティから統計を算出し、6キャラクターへのスコアを積み上げて最大値のキャラクターを選択する。スコアに使う指標:
+`analyzeCharacter()` がStravaアクティビティから統計を算出し、5つの能力スコア（0〜100）を出す。速度・1回の距離・登坂比率は**屋外ライドだけ**で計算する（Zwiftなど `VirtualRide` や `trainer` のライドは速度が出やすく短い練習が多いため、混ぜるとスプリンター寄りに歪む）。屋外が1件もない人だけ屋内も含める。合計距離・合計標高・乗った日数・パワーは屋内も含めた全ライドで出す。範囲は一般的なロード乗りの分布に合わせている（登坂 3〜18 m/km、速度 20〜34 km/h、1回の距離 20〜120 km、パワー 120〜280 W、乗った日数 週0.5〜6日）。
 
-- **登坂比率** (m/km) → climber・granfondo に加点
-- **平均距離** (km) → granfondo・tt に加点
-- **平均速度** (km/h) → sprinter・tt に加点
-- **短距離補正** (平均距離が短いほど) → sprinter に加点
-- **頻度の低さ** → weekend に加点
-- **パワー** (パワーメーターがある場合) → tt・climber に加点
+`pickCharacter()` が各キャラの適合度を**重みの合計が1の加重平均**で出し、最大のキャラを選ぶ（入力の数でキャラ間に有利不利が出ないようにするため。以前は合計点で比べていて、材料の多いTTと速度で加点されるスプリンターに偏っていた）。
+
+- climber: 登坂 0.8 + パワー 0.2
+- granfondo: 距離 0.75 + 登坂 0.25
+- tt: 速度 0.5 + 距離 0.2 + パワー 0.3
+- sprinter: 速度 0.7 + 短距離さ（100−距離）0.3 − 8
+- allrounder: 4能力（登坂・速度・距離・頻度）の平均 − 0.6×（最大−最小）+ 25（突出がなく全部そこそこ）
+- weekend: 0.85 ×（100 − 頻度）（頻度が低くてもロング派はグランフォンドを優先）
+
+重みを変えたら、架空のライダー集団で各キャラの割合を確かめる（熱心な層で1キャラ30%超にならず、どのキャラも数%以上出ることが目安）。
 
 ### キャラクター定義 (`models/characters/`)
 
@@ -85,6 +89,15 @@ Stravaアプリの **Authorization Callback Domain** は `vercel.app` に設定�
 
 Strava API Policy 5.3条により、Strava Data（APIで取得した全データと、そこから派生した統計・スコア・診断結果を含む）をAIに渡すこと（コンテキストへの投入を含む）は禁止されている。以前あったAI性格コメント機能はこのため削除した。Stravaから来たデータやその派生データを、LLMなどのAIサービスに送る機能は追加しない。
 
+### ライドの一言コメント (`models/insights.ts`)
+
+`buildInsights()` が統計・スコアから「富士山○個分」「週○回、継続の鬼」のようなコメントをルールで組み立て、重みの高い順に別カテゴリから最大3つ選ぶ（`resultController` で生成し `views/result/InsightsCard.tsx` が表示）。`buildChangeInsights()` はブラウザに保存した前回のキャラ・スコアとの差分コメントを作り、`EvolutionCard` に出す。AIは使わない。数値を含むため結果ページの本人向け表示に限り、シェアカード・OGP画像には載せない。新しいコメントは `RULES` に関数を1つ足せば増やせる。
+
+### 頻度と前回比較の注意点
+
+- 頻度は「週あたりの乗った日数」（`ridingDaysPerWeek`、`start_date_local` の日付で数える）。Zwiftなど屋内ライドや1回の外出の分割で件数が膨らむため、アクティビティ件数では数えない。旧URLの `ridesPerWeek` は `resultController.decodeResult` で読み替える
+- 前回結果（`models/resultHistory.ts`）は分析期間ごとに1件ずつ保存し、同じ期間どうしでのみ比較する。期間が違う診断を比べると数値が大きくぶれるため
+
 ### シェアカード (`views/result/ShareCard.tsx`)
 
 `html2canvas` でDOMをキャプチャして画像化する。Tailwindクラスはキャプチャ時に取りこぼすため、カード内のスタイルはすべてinline styleで記述する（Tailwindクラスはカード外のUIにのみ使用）。
@@ -96,6 +109,23 @@ Strava API Policy 5.3条により、Strava Data（APIで取得した全データ
 
 結果ページの「Xでポスト」ボタンは `/c/{characterId}_{sex}` をintent URLで投稿する。`shareController.createShareOgImage()` が `next/og` でキャラ別OGP画像（レイアウトは `views/share/OgImageView.tsx`）を生成し、Xのタイムラインに画像付きカードを出す。キャラ画像はfsで読むため `next.config.mjs` の `outputFileTracingIncludes` で関数にバンドルしている。日本語フォントはGoogle FontsからNoto Sans JPを必要文字だけ取得する。
 
+### GA4 計測
+
+`NEXT_PUBLIC_GA_ID` が設定されているときだけ送信する（`lib/gtag.ts`）。クリック計測は、ハンドラを持つボタンは `gtagEvent()` を直接呼び、それ以外のリンクは要素に `data-ga-event`（と任意で `data-ga-id`）を付ければ `views/common/ClickTracker.tsx` が拾う。
+
+| イベント | 発生箇所 | パラメータ |
+|---|---|---|
+| `diagnosis_start` | トップの期間ボタン | `period`, `predicted_type` |
+| `share_x` | 結果ページの「Xでポスト」（GA側でキーイベント＝CVに設定） | なし |
+| `share_card` | 結果ページの保存・共有ボタン | `method` = share / download |
+| `retry_diagnosis` | 結果ページの「もう一度診断する」 | なし |
+| `share_page_cta` | キャラ紹介ページ（`/c/...`）の「あなたも診断する」 | なし |
+| `ui_click` | その他のリンク | `button_id` |
+
+ユーザープロパティ `predicted_type`（ユーザー単位のカスタムディメンション）には、診断前にユーザーが選んだ予想タイプ（6キャラのID または `unknown`）を送る。ユーザー自身の入力なのでStrava由来ではない。
+
+診断結果のキャラや性別などStrava由来のデータはイベントにもユーザープロパティにも載せない（API Policy 5.4）。予想と結果の一致/不一致も結果を含むので送らない。予想は `models/prediction.ts` でlocalStorageに保存し、結果ページの `PredictionReveal` で一度だけ答え合わせして消す。
+
 ### プレビューモード
 
 `/result?preview=climber&sex=female` のようにURLパラメータを指定するとモックデータで結果ページをテスト表示できる（`?data=` より優先）。キャラクターID: `climber | sprinter | tt | granfondo | allrounder | weekend`。
@@ -103,10 +133,11 @@ Strava API Policy 5.3条により、Strava Data（APIで取得した全データ
 ## Strava API の制約
 
 - 本番アクセス承認済み（2026年11月）。接続アスリート数は**999人上限**。超過時は `exchangeCode()` が `err.code === 'athlete_limit'` エラーを投げ、トップページに `?error=athlete_limit` でリダイレクトされる。
-- レート制限: 全体 600リクエスト/15分・6,000/日、読み取り 300/15分・3,000/日。1診断あたりのAPI呼び出しはアクティビティ取得1回。
-- スコープ: `read,activity:read_all`
+- レート制限: 全体 600リクエスト/15分・6,000/日、読み取り 300/15分・3,000/日。1診断あたりのAPI呼び出しはアクティビティ取得が200件ごとに1回（`models/strava.ts` の `MAX_PAGES` で最大5回）。
+- スコープ: `read,activity:read`（公開・フォロワー限定のアクティビティのみ。「自分のみ」の非公開アクティビティとプライバシーゾーンは読まない。連携をためらわせないため `read_all` は使わない）
 - 診断は1回きりの用途なので、アクティビティ取得後に成否に関わらず `revokeToken()`（`POST /oauth/revoke`）で連携を解除し、接続アスリート枠を空ける。旧 `/oauth/deauthorize` は2027-06-01で廃止されるため使わない
-- アクティビティ取得: 最大200件/リクエスト（ページネーションは未実装）
+- アクティビティ・アスリートのIDは `id`（2027-06-01以降64bit整数でJSでは精度が落ちる）ではなく文字列の `id_str` を使う
+- アクティビティ取得: 最大200件/リクエスト。期間内の全件をページングで取得する（1年で200件を超える人が普通にいるため）
 
 ## sakura-api
 

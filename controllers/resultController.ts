@@ -3,9 +3,10 @@
 
 import type { AnalysisResult } from '@/models/analysis'
 import { isCharacterId, type CharacterId, type Sex } from '@/models/characters'
+import { buildInsights } from '@/models/insights'
 
 export type ResultPageData =
-  | { status: 'ok'; result: AnalysisResult; isPreview: boolean }
+  | { status: 'ok'; result: AnalysisResult; insights: string[]; isPreview: boolean }
   | { status: 'missing' }
   | { status: 'invalid' }
 
@@ -20,7 +21,10 @@ export function decodeResult(encoded: string): AnalysisResult | null {
       Buffer.from(encoded, 'base64url').toString('utf8'),
     ) as AnalysisResult
     if (!isCharacterId(characterId)) return null
-    return { characterId, athleteName, profileImageUrl, sex, stats, scores }
+    // 旧URLは週あたり「ライド件数」(ridesPerWeek) を持つ。件数で近似して表示を崩さない
+    const legacy = stats as AnalysisResult['stats'] & { ridesPerWeek?: number }
+    const ridingDaysPerWeek = legacy.ridingDaysPerWeek ?? legacy.ridesPerWeek ?? 0
+    return { characterId, athleteName, profileImageUrl, sex, stats: { ...stats, ridingDaysPerWeek }, scores }
   } catch {
     return null
   }
@@ -30,11 +34,12 @@ export function decodeResult(encoded: string): AnalysisResult | null {
 export function getResultPageData(params: { data?: string; preview?: string; sex?: string }): ResultPageData {
   if (isCharacterId(params.preview)) {
     const sex: Sex = params.sex === 'female' ? 'female' : 'male'
-    return { status: 'ok', result: buildPreviewResult(params.preview, sex), isPreview: true }
+    const result = buildPreviewResult(params.preview, sex)
+    return { status: 'ok', result, insights: buildInsights(result), isPreview: true }
   }
   if (!params.data) return { status: 'missing' }
   const result = decodeResult(params.data)
-  return result ? { status: 'ok', result, isPreview: false } : { status: 'invalid' }
+  return result ? { status: 'ok', result, insights: buildInsights(result), isPreview: false } : { status: 'invalid' }
 }
 
 function buildPreviewResult(characterId: CharacterId, sex: Sex): AnalysisResult {
@@ -50,7 +55,7 @@ function buildPreviewResult(characterId: CharacterId, sex: Sex): AnalysisResult 
       totalElevationM: 18500,
       avgSpeedKmh: 28.5,
       climbingRatioMPerKm: 6.8,
-      ridesPerWeek: 3.5,
+      ridingDaysPerWeek: 3.5,
       avgWatts: 210,
       periodDays: 90,
     },

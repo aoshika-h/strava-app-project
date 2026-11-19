@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { gtagEvent } from '@/lib/gtag'
+import { gtagEvent, gtagSetUserProperties } from '@/lib/gtag'
+import { savePrediction, type PredictedType } from '@/models/prediction'
 
 const PERIODS = [
   { label: '3ヶ月', period: '90' },
@@ -9,7 +10,7 @@ const PERIODS = [
   { label: '1年',   period: '365' },
 ]
 
-export default function PeriodButtons() {
+export default function PeriodButtons({ predicted }: { predicted: PredictedType }) {
   const [loading, setLoading] = useState<string | null>(null)
 
   useEffect(() => {
@@ -19,7 +20,9 @@ export default function PeriodButtons() {
 
   const handleClick = (period: string, label: string) => {
     if (loading) return
-    gtagEvent('diagnosis_start', { period: label })
+    gtagSetUserProperties({ predicted_type: predicted })
+    gtagEvent('diagnosis_start', { period: label, predicted_type: predicted })
+    savePrediction(predicted)
     setLoading(period)
     window.location.href = `/api/auth/strava?period=${period}`
   }

@@ -4,29 +4,38 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import type { AnalysisResult } from '@/models/analysis'
-import { getCharacter } from '@/models/characters'
+import { getCharacter, type CharacterId } from '@/models/characters'
 import { loadLastResult, saveLastResult, type StoredResult } from '@/models/resultHistory'
 import ShareCard from './ShareCard'
 import EvolutionCard from './EvolutionCard'
 import RadarChart from './RadarChart'
-import { SCORE_AXES } from './scoreAxes'
+import InsightsCard from './InsightsCard'
+import PredictionReveal from './PredictionReveal'
+import { takePrediction } from '@/models/prediction'
+import { SCORE_AXES } from '@/models/scoreAxes'
 
 export default function ResultView({
   result,
+  insights,
   sharePath,
   isPreview = false,
 }: {
   result: AnalysisResult
+  insights: string[]
   sharePath: string
   isPreview?: boolean
 }) {
   const character = getCharacter(result.characterId)
   const { stats, scores } = result
+  // 屋内ライドが混ざっているときは、実走だけで計算した項目だとわかるようにする
+  const outdoorTag = stats.outdoorRides && stats.outdoorRides < stats.totalRides ? '（屋外）' : ''
   const [prevResult, setPrevResult] = useState<StoredResult | null>(null)
+  const [predicted, setPredicted] = useState<CharacterId | null>(null)
 
   useEffect(() => {
     if (isPreview) return
-    setPrevResult(loadLastResult())
+    setPredicted(takePrediction())
+    setPrevResult(loadLastResult(result.stats.periodDays))
     saveLastResult(result)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -43,13 +52,19 @@ export default function ResultView({
 
       <div className="max-w-2xl mx-auto px-6 pt-8 pb-16 space-y-6">
 
-        {/* シェアカード（ページ最上部） */}
+        {/* 診断前の予想との答え合わせ（予想した場合のみ） */}
+        {predicted && <PredictionReveal predicted={predicted} actual={result.characterId} />}
+
+        {/* シェアカード */}
         <ShareCard
           character={character}
           characterId={result.characterId}
           sex={result.sex}
           sharePath={sharePath}
         />
+
+        {/* ライドの数値から組み立てた一言コメント（本人だけに表示） */}
+        <InsightsCard insights={insights} accentColor={character.accentColor} />
 
         {/* キャラクター変化（前回診断がある場合のみ表示） */}
         {prevResult && <EvolutionCard prev={prevResult} current={result} />}
@@ -60,11 +75,11 @@ export default function ResultView({
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {[
               { label: '合計距離', value: `${stats.totalDistanceKm.toLocaleString()} km`, icon: '🛣️' },
-              { label: '平均距離', value: `${stats.avgDistanceKm} km`, icon: '📏' },
-              { label: '平均速度', value: `${stats.avgSpeedKmh} km/h`, icon: '⚡' },
+              { label: `平均距離${outdoorTag}`, value: `${stats.avgDistanceKm} km`, icon: '📏' },
+              { label: `平均速度${outdoorTag}`, value: `${stats.avgSpeedKmh} km/h`, icon: '⚡' },
               { label: '総獲得標高', value: `${stats.totalElevationM.toLocaleString()} m`, icon: '🏔️' },
-              { label: '山岳比率', value: `${stats.climbingRatioMPerKm} m/km`, icon: '📈' },
-              { label: '週頻度', value: `${stats.ridesPerWeek} 回/週`, icon: '📅' },
+              { label: `山岳比率${outdoorTag}`, value: `${stats.climbingRatioMPerKm} m/km`, icon: '📈' },
+              { label: '乗った日数', value: `週${stats.ridingDaysPerWeek}日`, icon: '📅' },
               ...(stats.avgWatts > 0 ? [{ label: '平均パワー', value: `${stats.avgWatts} W`, icon: '💪' }] : []),
             ].map((item) => (
               <div key={item.label} className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
@@ -147,6 +162,7 @@ export default function ResultView({
         {/* もう一度診断 */}
         <div className="text-center pt-2">
           <Link
+            data-ga-event="retry_diagnosis"
             href="/"
             className="inline-flex items-center gap-2 bg-white/8 hover:bg-white/12 border border-white/10 text-white/70 hover:text-white font-medium px-8 py-3 rounded-xl transition-colors text-sm"
           >

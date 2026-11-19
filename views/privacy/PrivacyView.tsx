@@ -18,7 +18,7 @@ export default function PrivacyView() {
 
         {/* ヘッダー */}
         <div className="mb-10">
-          <Link href="/" className="text-xs text-white/30 hover:text-white/60 transition-colors">← VeloAva トップ</Link>
+          <Link href="/" data-ga-event="ui_click" data-ga-id="privacy_back_top" className="text-xs text-white/30 hover:text-white/60 transition-colors">← VeloAva トップ</Link>
           <h1 className="text-2xl font-black mt-4 mb-1">プライバシーポリシー</h1>
           <p className="text-xs text-white/30">Privacy Policy — 最終更新: 2026年10月</p>
         </div>
@@ -40,25 +40,25 @@ export default function PrivacyView() {
 
         <Section title="3. データの保存について">
           <p>VeloAvaはStravaから取得したアクティビティデータをサーバーに保存しません。診断結果はURLパラメータとしてブラウザ側にのみ存在し、セッション終了とともに消滅します。</p>
-          <p>なお、前回の診断結果との比較機能のため、直近の診断結果（キャラクタータイプ・スコア・日付）をお使いのブラウザのlocalStorageに保存します。この情報はサーバーに送信されず、ブラウザ内にのみ存在します。</p>
+          <p>なお、前回の診断結果との比較機能のため、分析期間ごとの直近の診断結果（キャラクタータイプ・スコア・分析期間・日付）をお使いのブラウザのlocalStorageに保存します。この情報はサーバーに送信されず、ブラウザ内にのみ存在します。診断前に選んだ「予想タイプ」も答え合わせのため一時的にブラウザに保存し、結果の表示後に削除します。</p>
         </Section>
 
         <Section title="4. 第三者サービスへのデータ送信">
           <p>以下の外部サービスにデータを送信します。</p>
           <ul className="list-disc list-inside space-y-1 mt-2">
-            <li><span className="text-white/70 font-medium">Google Analytics</span> — 匿名の利用統計（ページビュー、クリックイベント）を収集します。個人を特定する情報は含まれません。</li>
+            <li><span className="text-white/70 font-medium">Google Analytics</span> — 匿名の利用統計（ページビュー、クリックイベント、診断前に選んだ予想タイプ）を収集します。個人を特定する情報やStravaのデータは含まれません。</li>
           </ul>
           <p className="mt-2">Stravaから取得したデータを第三者（AIサービスを含む）に提供することはありません。</p>
         </Section>
 
         <Section title="5. Strava APIについて">
-          <p>本アプリはStravaの公式APIを使用しています。ライドデータの読み取り権限のみを使用し、データの書き込み・変更・削除は一切行いません。Stravaのプライバシーポリシーについては <span className="text-orange-400">strava.com/legal/privacy</span> をご確認ください。</p>
+          <p>本アプリはStravaの公式APIを使用しています。公開・フォロワー限定のアクティビティの読み取り権限のみを使用し（「自分のみ」に設定した非公開アクティビティは読みません）、データの書き込み・変更・削除は一切行いません。Stravaのプライバシーポリシーについては <span className="text-orange-400">strava.com/legal/privacy</span> をご確認ください。</p>
         </Section>
 
         <Section title="6. お問い合わせ">
           <p>プライバシーに関するご質問は下記メールアドレスまでお問い合わせください。</p>
           <p className="mt-2">
-            <a href="mailto:veloava@aoshika.net" className="text-orange-400 hover:underline">veloava@aoshika.net</a>
+            <a href="mailto:veloava@aoshika.net" data-ga-event="ui_click" data-ga-id="contact_mail" className="text-orange-400 hover:underline">veloava@aoshika.net</a>
           </p>
         </Section>
 
@@ -73,25 +73,25 @@ export default function PrivacyView() {
             </div>
             <div>
               <h3 className="text-white/70 font-bold mb-1">Data Storage</h3>
-              <p>VeloAva does NOT store any Strava data on our servers. Diagnosis results exist only as URL parameters in your browser and are discarded after use. Only a minimal summary of your last result (character type, scores, date) is saved in your browser&apos;s localStorage for the evolution comparison feature — this data never leaves your device.</p>
+              <p>VeloAva does NOT store any Strava data on our servers. Diagnosis results exist only as URL parameters in your browser and are discarded after use. Only a minimal summary of your last result for each analysis period (character type, scores, period, date) is saved in your browser&apos;s localStorage for the evolution comparison feature — this data never leaves your device.</p>
             </div>
             <div>
               <h3 className="text-white/70 font-bold mb-1">Third-Party Services</h3>
-              <p>Anonymous usage statistics are collected via Google Analytics. No Strava data is sold or shared with any third party, including AI services.</p>
+              <p>Anonymous usage statistics (page views, clicks, and the type you guessed before the diagnosis) are collected via Google Analytics; they contain no Strava data. No Strava data is sold or shared with any third party, including AI services.</p>
             </div>
             <div>
               <h3 className="text-white/70 font-bold mb-1">Strava API Usage</h3>
-              <p>This application uses read-only Strava API access (<code className="text-white/40">read, activity:read_all</code>). We do not write, modify, or delete any data on Strava.</p>
+              <p>This application uses read-only Strava API access (<code className="text-white/40">read, activity:read</code>). Activities you set to “Only You” are not read. We do not write, modify, or delete any data on Strava.</p>
             </div>
             <div>
               <h3 className="text-white/70 font-bold mb-1">Contact</h3>
-              <p>For privacy-related inquiries, please contact us at <a href="mailto:veloava@aoshika.net" className="text-orange-400 hover:underline">veloava@aoshika.net</a>.</p>
+              <p>For privacy-related inquiries, please contact us at <a href="mailto:veloava@aoshika.net" data-ga-event="ui_click" data-ga-id="contact_mail" className="text-orange-400 hover:underline">veloava@aoshika.net</a>.</p>
             </div>
           </div>
         </div>
 
         <div className="text-center mt-12">
-          <Link href="/" className="text-sm text-orange-400 hover:underline">← トップに戻る</Link>
+          <Link href="/" data-ga-event="ui_click" data-ga-id="privacy_back_bottom" className="text-sm text-orange-400 hover:underline">← トップに戻る</Link>
         </div>
       </div>
     </main>

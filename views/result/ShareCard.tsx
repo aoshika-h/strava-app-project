@@ -3,7 +3,7 @@
 // キャラクター情報を1枚にまとめ、ダウンロード/共有ボタン付きで表示する
 // このコンポーネントがページ最上部に配置され、ヒーローセクションを兼ねる
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getVariant, type Character, type CharacterId, type Sex } from '@/models/characters'
 import { gtagEvent } from '@/lib/gtag'
 
@@ -21,16 +21,11 @@ export default function ShareCard({ character, characterId, sex, sharePath }: Pr
   const [saving, setSaving] = useState(false)
   const isMobileDevice = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0
 
-  const handleShareX = () => {
-    const shareUrl = `${window.location.origin}${sharePath}`
-    const text = `VeloAvaでサイクリストタイプを診断したら「${genderText.name}」（${genderText.title}）だった！\nあなたは何タイプ？\n#VeloAva #ロードバイク`
-    gtagEvent('share_card', { method: 'x' })
-    window.open(
-      `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`,
-      '_blank',
-      'noopener,noreferrer',
-    )
-  }
+  // LINEなどのアプリ内ブラウザは window.open をブロックするため、通常のリンクで投稿画面を開く
+  const [origin, setOrigin] = useState('')
+  useEffect(() => setOrigin(window.location.origin), [])
+  const shareText = `VeloAvaでサイクリストタイプを診断したら「${genderText.name}」（${genderText.title}）だった！\nあなたは何タイプ？\n#VeloAva #ロードバイク`
+  const xIntentUrl = `https://x.com/intent/post?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(origin + sharePath)}`
 
   const handleSave = async () => {
     if (!cardRef.current) return
@@ -75,40 +70,50 @@ export default function ShareCard({ character, characterId, sex, sharePath }: Pr
 
   return (
     <div>
-      {/* ダウンロードボタン（カードの上に配置） */}
-      <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '16px' }}>
-        <button
-          onClick={handleShareX}
+      {/* Xポスト・保存ボタン（カードの上に配置） */}
+      {/* 押しやすいようにカードと同じ幅いっぱい・高さ52pxにする */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '360px', maxWidth: '100%', margin: '0 auto 16px' }}>
+        <a
+          href={xIntentUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => gtagEvent('share_x')}
           style={{
-            display: 'inline-flex',
+            display: 'flex',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: '8px',
+            width: '100%',
+            minHeight: '52px',
             backgroundColor: '#000',
             color: '#fff',
             fontWeight: 900,
-            fontSize: '15px',
+            fontSize: '16px',
             padding: '12px 24px',
             borderRadius: '14px',
             border: '1px solid rgba(255,255,255,0.25)',
-            cursor: 'pointer',
+            textDecoration: 'none',
           }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
           </svg>
           でポスト
-        </button>
+        </a>
         <button
           onClick={handleSave}
           disabled={saving}
           style={{
-            display: 'inline-flex',
+            display: 'flex',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: '8px',
+            width: '100%',
+            minHeight: '52px',
             backgroundColor: character.accentColor,
             color: '#fff',
             fontWeight: 900,
-            fontSize: '15px',
+            fontSize: '16px',
             padding: '12px 28px',
             borderRadius: '14px',
             border: 'none',

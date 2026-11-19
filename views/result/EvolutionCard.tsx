@@ -3,11 +3,16 @@
 import type { AnalysisResult } from '@/models/analysis'
 import { getCharacter, getVariant } from '@/models/characters'
 import type { StoredResult } from '@/models/resultHistory'
-import { SCORE_AXES } from './scoreAxes'
+import { buildChangeInsights } from '@/models/insights'
+import { SCORE_AXES } from '@/models/scoreAxes'
 
 function formatDate(iso: string): string {
   const d = new Date(iso)
   return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`
+}
+
+function periodLabel(days: number): string {
+  return days >= 365 ? '1年' : `${Math.round(days / 30)}ヶ月`
 }
 
 export default function EvolutionCard({ prev, current }: { prev: StoredResult; current: AnalysisResult }) {
@@ -68,8 +73,12 @@ export default function EvolutionCard({ prev, current }: { prev: StoredResult; c
           })}
         </div>
 
+        {buildChangeInsights(prev, current).map((line) => (
+          <p key={line} className="mt-4 text-sm text-white/70 text-center">{line}</p>
+        ))}
+
         <div className="text-center mt-4 text-xs text-white/20">
-          前回の診断: {formatDate(prev.date)}
+          前回の{periodLabel(prev.periodDays)}診断: {formatDate(prev.date)}
         </div>
       </div>
     </div>
