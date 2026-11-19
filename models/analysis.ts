@@ -20,6 +20,7 @@ export interface AnalysisResult {
     ridingDaysPerWeek: number   // 週あたりの乗った日数（1日に複数アクティビティがあっても1日）
     avgWatts: number            // 平均パワー (ワット、0=データなし)
     periodDays: number          // 分析期間 (日)
+    outdoorRides?: number       // 速度・平均距離・登坂の計算に使った屋外ライド数（0なら屋内も含めて計算）
   }
   scores: {
     climbing: number     // 登坂力 0-100
@@ -80,19 +81,25 @@ export function analyzeCharacter(
 
   // ---- 基本統計の計算 ----
 
-  const totalDistM = rides.reduce((s, r) => s + r.distance, 0)
-  const totalDistKm = totalDistM / 1000
+  // 合計は屋内も含めた練習量として全ライドで出す
+  const totalDistKm = rides.reduce((s, r) => s + r.distance, 0) / 1000
   const totalElev = rides.reduce((s, r) => s + r.total_elevation_gain, 0)
 
+  // 走りの特徴（速度・1回の距離・登坂）は実走を基準にする。Zwiftなどの屋内ライドは速度が出やすく
+  // 短い練習が多いため、混ぜるとスプリンター寄りに歪む。屋外が1件もない人だけ屋内も含める
+  const outdoor = rides.filter((r) => r.type !== 'VirtualRide' && r.sport_type !== 'VirtualRide' && !r.trainer)
+  const basis = outdoor.length > 0 ? outdoor : rides
+  const basisDistKm = basis.reduce((s, r) => s + r.distance, 0) / 1000
+  const basisElev = basis.reduce((s, r) => s + r.total_elevation_gain, 0)
+
   // 獲得標高比率: 山岳系かどうかの指標 (m/km)
-  const climbingRatio = totalDistKm > 0 ? totalElev / totalDistKm : 0
+  const climbingRatio = basisDistKm > 0 ? basisElev / basisDistKm : 0
 
   // 平均速度 (km/h)
-  const speeds = rides.map((r) => r.average_speed * 3.6)
-  const avgSpeed = speeds.reduce((a, b) => a + b, 0) / speeds.length
+  const avgSpeed = basis.reduce((s, r) => s + r.average_speed * 3.6, 0) / basis.length
 
   // 平均距離 (km)
-  const avgDistance = totalDistKm / rides.length
+  const avgDistance = basisDistKm / basis.length
 
   // 週あたりの乗った日数（屋内ライドやアクティビティ分割で件数が膨らむため、日付単位で数える）
   const ridingDays = new Set(rides.map((r) => r.start_date_local.slice(0, 10))).size
@@ -130,6 +137,7 @@ export function analyzeCharacter(
       climbingRatioMPerKm: Math.round(climbingRatio * 10) / 10,
       ridingDaysPerWeek: Math.round(ridingDaysPerWeek * 10) / 10,
       avgWatts: Math.round(avgWatts),
+      outdoorRides: outdoor.length,
     },
     periodDays,
     scores

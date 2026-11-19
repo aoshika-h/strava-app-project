@@ -10,6 +10,7 @@ export interface StravaActivity {
   name: string
   type: string          // 'Ride', 'VirtualRide', 'Run' など
   sport_type: string
+  trainer?: boolean     // ローラー台など屋内で記録したライド
   distance: number      // メートル
   moving_time: number   // 秒
   elapsed_time: number  // 秒

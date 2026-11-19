@@ -27,6 +27,8 @@ export default function ResultView({
 }) {
   const character = getCharacter(result.characterId)
   const { stats, scores } = result
+  // 屋内ライドが混ざっているときは、実走だけで計算した項目だとわかるようにする
+  const outdoorTag = stats.outdoorRides && stats.outdoorRides < stats.totalRides ? '（屋外）' : ''
   const [prevResult, setPrevResult] = useState<StoredResult | null>(null)
   const [predicted, setPredicted] = useState<CharacterId | null>(null)
 
@@ -73,10 +75,10 @@ export default function ResultView({
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {[
               { label: '合計距離', value: `${stats.totalDistanceKm.toLocaleString()} km`, icon: '🛣️' },
-              { label: '平均距離', value: `${stats.avgDistanceKm} km`, icon: '📏' },
-              { label: '平均速度', value: `${stats.avgSpeedKmh} km/h`, icon: '⚡' },
+              { label: `平均距離${outdoorTag}`, value: `${stats.avgDistanceKm} km`, icon: '📏' },
+              { label: `平均速度${outdoorTag}`, value: `${stats.avgSpeedKmh} km/h`, icon: '⚡' },
               { label: '総獲得標高', value: `${stats.totalElevationM.toLocaleString()} m`, icon: '🏔️' },
-              { label: '山岳比率', value: `${stats.climbingRatioMPerKm} m/km`, icon: '📈' },
+              { label: `山岳比率${outdoorTag}`, value: `${stats.climbingRatioMPerKm} m/km`, icon: '📈' },
               { label: '乗った日数', value: `週${stats.ridingDaysPerWeek}日`, icon: '📅' },
               ...(stats.avgWatts > 0 ? [{ label: '平均パワー', value: `${stats.avgWatts} W`, icon: '💪' }] : []),
             ].map((item) => (
