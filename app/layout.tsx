@@ -37,7 +37,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
-              gtag('config', '${GA_ID}');
+              // 結果ページのプレビュー表示（?preview=）は動作確認用なので計測しない。config しなければイベントも送られない
+              if (!new URLSearchParams(location.search).has('preview')) gtag('config', '${GA_ID}');
             `}</Script>
           </>
         )}

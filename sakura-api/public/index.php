@@ -830,7 +830,14 @@ function fetch_ga_funnel(array $config, int $days): array
     ];
     [$top, $result, $share, $events] = ga_batch_reports($config, [
         $pageUsers(ga_page_filter('EXACT', '/')),
-        $pageUsers(ga_page_filter('EXACT', '/result')),
+        // 動作確認用のプレビュー表示（/result?preview=...）は除く。アプリ側でも 2026-11-19 以降は計測していない
+        $pageUsers(['andGroup' => ['expressions' => [
+            ga_page_filter('EXACT', '/result'),
+            ['notExpression' => ['filter' => [
+                'fieldName' => 'pagePathPlusQueryString',
+                'stringFilter' => ['matchType' => 'CONTAINS', 'value' => 'preview='],
+            ]]],
+        ]]]),
         $pageUsers(ga_page_filter('BEGINS_WITH', '/c/')),
         [
             'dateRanges' => ga_date_range($days),
