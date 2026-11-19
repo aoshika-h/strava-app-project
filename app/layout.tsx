@@ -38,7 +38,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
               // 結果ページのプレビュー表示（?preview=）は動作確認用なので計測しない。config しなければイベントも送られない
-              if (!new URLSearchParams(location.search).has('preview')) gtag('config', '${GA_ID}');
+              (function () {
+                var params = new URLSearchParams(location.search);
+                if (params.has('preview')) return;
+                // Strava 認証から戻ったとき、診断開始時の client_id を引き継いで同じ人として計測し、URL からは消す
+                var cid = params.get('cid');
+                if (cid && /^\\d{1,20}\\.\\d{1,20}$/.test(cid)) {
+                  gtag('config', '${GA_ID}', { client_id: cid });
+                  params.delete('cid');
+                  var qs = params.toString();
+                  history.replaceState(history.state, '', location.pathname + (qs ? '?' + qs : '') + location.hash);
+                } else {
+                  gtag('config', '${GA_ID}');
+                }
+              })();
             `}</Script>
           </>
         )}

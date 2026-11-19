@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { gtagEvent, gtagSetUserProperties } from '@/lib/gtag'
+import { getGaClientId, gtagEvent, gtagSetUserProperties } from '@/lib/gtag'
 import { savePrediction, type PredictedType } from '@/models/prediction'
 
 const PERIODS = [
@@ -18,13 +18,14 @@ export default function PeriodButtons({ predicted }: { predicted: PredictedType 
     return () => { document.body.style.overflow = '' }
   }, [loading])
 
-  const handleClick = (period: string, label: string) => {
+  const handleClick = async (period: string, label: string) => {
     if (loading) return
     gtagSetUserProperties({ predicted_type: predicted })
     gtagEvent('diagnosis_start', { period: label, predicted_type: predicted })
     savePrediction(predicted)
     setLoading(period)
-    window.location.href = `/api/auth/strava?period=${period}`
+    const cid = await getGaClientId()
+    window.location.href = `/api/auth/strava?period=${period}${cid ? `&cid=${encodeURIComponent(cid)}` : ''}`
   }
 
   return (

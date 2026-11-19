@@ -7,6 +7,17 @@ import { analyzeCharacter } from '@/models/analysis'
 import { encodeResult } from './resultController'
 
 const VALID_PERIODS = ['90', '180', '365']
+// GA の client_id（例 123456789.1700000000）。Strava 認証の前後でブラウザが変わっても同じ人として計測するために持ち回る
+const GA_CLIENT_ID = /^\d{1,20}\.\d{1,20}$/
+
+// state は「期間」または「期間:client_id」
+function parseState(state: string | null): { periodDays: number; cid: string | null } {
+  const [period, cid] = (state ?? '').split(':')
+  return {
+    periodDays: Math.min(365, Math.max(90, parseInt(period, 10) || 90)),
+    cid: cid && GA_CLIENT_ID.test(cid) ? cid : null,
+  }
+}
 
 export function startAuthorization(request: NextRequest): NextResponse {
   const clientId = process.env.STRAVA_CLIENT_ID
@@ -26,8 +37,9 @@ export function startAuthorization(request: NextRequest): NextResponse {
   authUrl.searchParams.set('approval_prompt', 'auto')
   // 非公開（自分のみ）のアクティビティやプライバシーゾーンは診断に不要なので read_all は求めない
   authUrl.searchParams.set('scope', 'read,activity:read')
-  // 期間をstateパラメータでコールバックに引き渡す
-  authUrl.searchParams.set('state', safePeriod)
+  // 期間（と GA の client_id）を state でコールバックに引き渡す
+  const cid = request.nextUrl.searchParams.get('cid')
+  authUrl.searchParams.set('state', cid && GA_CLIENT_ID.test(cid) ? `${safePeriod}:${cid}` : safePeriod)
 
   return NextResponse.redirect(authUrl.toString())
 }
@@ -45,7 +57,7 @@ export async function handleCallback(request: NextRequest): Promise<NextResponse
   }
 
   try {
-    const periodDays = Math.min(365, Math.max(90, parseInt(searchParams.get('state') ?? '90', 10) || 90))
+    const { periodDays, cid } = parseState(searchParams.get('state'))
 
     const { access_token, refresh_token, athlete } = await exchangeCode(code)
     const since = Math.floor(Date.now() / 1000) - periodDays * 24 * 60 * 60
@@ -54,7 +66,7 @@ export async function handleCallback(request: NextRequest): Promise<NextResponse
 
     const result = analyzeCharacter(activities, athlete, periodDays)
 
-    return NextResponse.redirect(`${origin}/result?data=${encodeResult(result)}`)
+    return NextResponse.redirect(`${origin}/result?data=${encodeResult(result)}${cid ? `&cid=${cid}` : ''}`)
   } catch (err) {
     console.error('Strava診断エラー:', err)
     if ((err as { code?: string }).code === 'athlete_limit') {
