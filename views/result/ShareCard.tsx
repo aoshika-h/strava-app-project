@@ -70,21 +70,25 @@ export default function ShareCard({ character, characterId, sex, sharePath }: Pr
 
   return (
     <div>
-      {/* ダウンロードボタン（カードの上に配置） */}
-      <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '16px' }}>
+      {/* Xポスト・保存ボタン（カードの上に配置） */}
+      {/* 押しやすいようにカードと同じ幅いっぱい・高さ52pxにする */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '360px', maxWidth: '100%', margin: '0 auto 16px' }}>
         <a
           href={xIntentUrl}
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => gtagEvent('share_x')}
           style={{
-            display: 'inline-flex',
+            display: 'flex',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: '8px',
+            width: '100%',
+            minHeight: '52px',
             backgroundColor: '#000',
             color: '#fff',
             fontWeight: 900,
-            fontSize: '15px',
+            fontSize: '16px',
             padding: '12px 24px',
             borderRadius: '14px',
             border: '1px solid rgba(255,255,255,0.25)',
@@ -100,13 +104,16 @@ export default function ShareCard({ character, characterId, sex, sharePath }: Pr
           onClick={handleSave}
           disabled={saving}
           style={{
-            display: 'inline-flex',
+            display: 'flex',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: '8px',
+            width: '100%',
+            minHeight: '52px',
             backgroundColor: character.accentColor,
             color: '#fff',
             fontWeight: 900,
-            fontSize: '15px',
+            fontSize: '16px',
             padding: '12px 28px',
             borderRadius: '14px',
             border: 'none',
