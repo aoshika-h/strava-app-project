@@ -111,7 +111,7 @@ Strava API Policy 5.3条により、Strava Data（APIで取得した全データ
 
 ### GA4 計測
 
-`NEXT_PUBLIC_GA_ID` が設定されているときだけ送信する（`lib/gtag.ts`）。クリック計測は、ハンドラを持つボタンは `gtagEvent()` を直接呼び、それ以外のリンクは要素に `data-ga-event`（と任意で `data-ga-id`）を付ければ `views/common/ClickTracker.tsx` が拾う。
+`NEXT_PUBLIC_GA_ID` が設定されているときだけ送信する（`lib/gtag.ts`）。プレビュー表示（`?preview=` 付きのURLで開いたとき）は `app/layout.tsx` で `gtag('config')` を呼ばないので、ページビューもイベントも送られない。クリック計測は、ハンドラを持つボタンは `gtagEvent()` を直接呼び、それ以外のリンクは要素に `data-ga-event`（と任意で `data-ga-id`）を付ければ `views/common/ClickTracker.tsx` が拾う。
 
 | イベント | 発生箇所 | パラメータ |
 |---|---|---|
