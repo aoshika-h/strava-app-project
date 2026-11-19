@@ -139,6 +139,10 @@ Strava API Policy 5.3条により、Strava Data（APIで取得した全データ
 - アクティビティ・アスリートのIDは `id`（2027-06-01以降64bit整数でJSでは精度が落ちる）ではなく文字列の `id_str` を使う
 - アクティビティ取得: 最大200件/リクエスト。期間内の全件をページングで取得する（1年で200件を超える人が普通にいるため）
 
+## sakura-api
+
+`sakura-api/` は VeloAva とは別の、intervals.icu プロキシ兼 MCP サーバー（PHP、さくらのレンタルサーバで稼働、claude.ai のコネクタ `sakura_icu_api`）。仕様・認証・デプロイ手順は `sakura-api/CLAUDE.md` にまとめている。Next.js のビルドには関係しない。
+
 ## デプロイ
 
 Vercel（無料プラン対応）。環境変数4つをVercelダッシュボードで設定し、`NEXT_PUBLIC_BASE_URL` をVercelの割り当てURLに合わせる。GitHubプッシュで自動デプロイ。本番URL: https://veloava.vercel.app

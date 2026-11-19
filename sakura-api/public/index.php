@@ -8,7 +8,10 @@ declare(strict_types=1);
  * GET /wellness?days=14
  * GET /activity/{activity_id}        （?raw=1 で intervals.icu の応答をそのまま返す）
  * GET /activity/{activity_id}/power-vs-hr
- * GET /streams/{activity_id}?types=time,watts,heart_rate,cadence
+ * GET /activity/{activity_id}/streams?types=&resolution=&start_sec=&end_sec=（間引き済みの列形式）
+ * GET /streams/{activity_id}?types=time,watts,heartrate,cadence（intervals.icu の応答をそのまま返す）
+ * POST /mcp                          （MCP サーバー。claude.ai のカスタムコネクタ用）
+ * POST /mcp/{MCP_URL_SECRET}         （ヘッダーを設定できないクライアント用。URL 自体を鍵にする）
  *
  * クライアント認証: Authorization: Bearer {PROXY_TOKEN}
  * 計算は intervals.icu に任せ、ここでは認証を隠してフィールドを抜き出すだけ。
@@ -16,11 +19,30 @@ declare(strict_types=1);
 
 const ICU_BASE_URL = 'https://intervals.icu/api/v1';
 const MAX_DAYS = 365;
-const DEFAULT_STREAM_TYPES = 'time,watts,heart_rate,cadence';
+const DEFAULT_STREAM_TYPES = 'time,watts,heartrate,cadence';
+/** 分析用ストリームの既定（intervals.icu のストリーム名） */
+const ANALYSIS_STREAM_TYPES = ['time', 'watts', 'heartrate', 'cadence', 'velocity_smooth', 'altitude', 'distance'];
+/** 間引くときに平均ではなく区間の最後の値を使うストリーム */
+const LAST_VALUE_STREAM_TYPES = ['time', 'distance'];
+const MAX_STREAM_RESOLUTION = 3600;
+const MAX_STREAM_START_SEC = 7 * 24 * 3600;
+const STREAM_RESPONSE_BYTES_LIMIT = 100000;
 const CONNECT_TIMEOUT_SEC = 5;
 const REQUEST_TIMEOUT_SEC = 20;
 const STREAM_TIMEOUT_SEC = 40;
 const MAX_RETRIES = 2;
+const MCP_PROTOCOL_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
+
+/** クライアントに返すエラー（HTTP ステータスを code に持つ） */
+final class ApiError extends RuntimeException
+{
+}
+
+/** intervals.icu の J（ジュール）を kJ に変換する */
+function joules_to_kj($joules): ?float
+{
+    return is_numeric($joules) ? round($joules / 1000, 1) : null;
+}
 
 // ---------------------------------------------------------------------------
 // 設定読み込み
@@ -32,7 +54,7 @@ const MAX_RETRIES = 2;
  */
 function load_config(): array
 {
-    $keys = ['ICU_API_KEY', 'ICU_ATHLETE_ID', 'PROXY_TOKEN', 'CORS_ALLOWED_ORIGINS', 'ICU_TIMEZONE'];
+    $keys = ['ICU_API_KEY', 'ICU_ATHLETE_ID', 'PROXY_TOKEN', 'MCP_URL_SECRET', 'CORS_ALLOWED_ORIGINS', 'ICU_TIMEZONE'];
     $config = [];
     foreach ($keys as $key) {
         $value = getenv($key);
@@ -138,7 +160,7 @@ function scrub_secrets(string $text, array $config): string
 
 /**
  * intervals.icu に GET する。接続失敗・429・5xx は指数バックオフでリトライ。
- * 成功時は生のレスポンスボディを返し、失敗時はエラーレスポンスを返して終了する。
+ * 成功時は生のレスポンスボディを返し、失敗時は ApiError を投げる。
  */
 function icu_get(array $config, string $path, array $query, int $timeoutSec): string
 {
@@ -172,13 +194,13 @@ function icu_get(array $config, string $path, array $query, int $timeoutSec): st
     if ($body === false) {
         error_log('icu-proxy: upstream request failed (curl errno ' . $errno . ') ' . $path);
         if ($errno === CURLE_OPERATION_TIMEDOUT) {
-            send_error(504, 'upstream timeout');
+            throw new ApiError('upstream timeout', 504);
         }
-        send_error(502, 'upstream request failed');
+        throw new ApiError('upstream request failed', 502);
     }
 
     if ($status >= 400) {
-        send_error($status, scrub_secrets(upstream_error_message($body, $status), $config));
+        throw new ApiError(scrub_secrets(upstream_error_message($body, $status), $config), $status);
     }
 
     return $body;
@@ -202,7 +224,16 @@ function decode_upstream_list(string $body): array
 {
     $decoded = json_decode($body, true);
     if (!is_array($decoded) || !array_is_list($decoded)) {
-        send_error(502, 'unexpected upstream response');
+        throw new ApiError('unexpected upstream response', 502);
+    }
+    return $decoded;
+}
+
+function decode_upstream_object(string $body): array
+{
+    $decoded = json_decode($body, true);
+    if (!is_array($decoded)) {
+        throw new ApiError('unexpected upstream response', 502);
     }
     return $decoded;
 }
@@ -211,16 +242,19 @@ function decode_upstream_list(string $body): array
 // パラメータ
 // ---------------------------------------------------------------------------
 
-function days_param(int $default): int
+/** days パラメータ（クエリ文字列の文字列、または MCP の整数）を検証する */
+function parse_days($raw, int $default): int
 {
-    $raw = $_GET['days'] ?? null;
     if ($raw === null || $raw === '') {
         return $default;
     }
-    if (!is_string($raw) || !ctype_digit($raw) || (int) $raw < 1 || (int) $raw > MAX_DAYS) {
-        send_error(400, 'days must be an integer between 1 and ' . MAX_DAYS);
+    if (is_string($raw) && ctype_digit($raw)) {
+        $raw = (int) $raw;
     }
-    return (int) $raw;
+    if (!is_int($raw) || $raw < 1 || $raw > MAX_DAYS) {
+        throw new ApiError('days must be an integer between 1 and ' . MAX_DAYS, 400);
+    }
+    return $raw;
 }
 
 /** intervals.icu に渡す oldest / newest（今日 - n日 〜 今日） */
@@ -238,9 +272,8 @@ function date_range(array $config, int $days): array
 // エンドポイント
 // ---------------------------------------------------------------------------
 
-function handle_activities(array $config): void
+function fetch_activities(array $config, int $days): array
 {
-    $days = days_param(7);
     $path = '/athlete/' . rawurlencode($config['ICU_ATHLETE_ID']) . '/activities';
     $activities = decode_upstream_list(icu_get($config, $path, date_range($config, $days), REQUEST_TIMEOUT_SEC));
 
@@ -265,18 +298,17 @@ function handle_activities(array $config): void
             'decoupling' => $a['decoupling'] ?? null,
             'pw_hr' => $a['icu_power_hr'] ?? null,
             'eftp' => $a['icu_rolling_ftp'] ?? null,
-            'kj' => $a['icu_joules'] ?? null,
+            'kj' => joules_to_kj($a['icu_joules'] ?? null),
             'zone_times' => $a['icu_zone_times'] ?? null,
             'description' => $a['description'] ?? null,
         ];
     }, array_filter($activities, 'is_array'));
 
-    send_json(200, array_values($result));
+    return array_values($result);
 }
 
-function handle_wellness(array $config): void
+function fetch_wellness(array $config, int $days): array
 {
-    $days = days_param(14);
     $path = '/athlete/' . rawurlencode($config['ICU_ATHLETE_ID']) . '/wellness';
     $records = decode_upstream_list(icu_get($config, $path, date_range($config, $days), REQUEST_TIMEOUT_SEC));
 
@@ -296,34 +328,26 @@ function handle_wellness(array $config): void
         ];
     }, array_filter($records, 'is_array'));
 
-    send_json(200, array_values($result));
+    return array_values($result);
 }
 
 function require_activity_id(string $activityId): void
 {
     if (!preg_match('/^[A-Za-z0-9_-]{1,64}$/', $activityId)) {
-        send_error(400, 'invalid activity id');
+        throw new ApiError('invalid activity id', 400);
     }
 }
 
-/**
- * アクティビティ詳細（intervals.icu のアクティビティ画面のサマリー・ゾーン・インターバル表に相当）。
- * ?raw=1 で intervals.icu のレスポンスを加工せずに返す（フィールド名の確認用）。
- */
-function handle_activity(array $config, string $activityId): void
+function fetch_activity_raw(array $config, string $activityId): string
 {
     require_activity_id($activityId);
-    $body = icu_get($config, '/activity/' . $activityId, ['intervals' => 'true'], REQUEST_TIMEOUT_SEC);
-    if (($_GET['raw'] ?? '') === '1') {
-        http_response_code(200);
-        echo $body;
-        exit;
-    }
+    return icu_get($config, '/activity/' . $activityId, ['intervals' => 'true'], REQUEST_TIMEOUT_SEC);
+}
 
-    $a = json_decode($body, true);
-    if (!is_array($a)) {
-        send_error(502, 'unexpected upstream response');
-    }
+/** アクティビティ詳細（intervals.icu のアクティビティ画面のサマリー・ゾーン・インターバル表に相当） */
+function fetch_activity(array $config, string $activityId): array
+{
+    $a = decode_upstream_object(fetch_activity_raw($config, $activityId));
 
     $start = $a['start_date_local'] ?? null;
     $ctl = $a['icu_ctl'] ?? null;
@@ -348,7 +372,7 @@ function handle_activity(array $config, string $activityId): void
         'zone' => $i['zone'] ?? null,
     ], array_values(array_filter($a['icu_intervals'] ?? [], 'is_array')));
 
-    send_json(200, [
+    return [
         'id' => $a['id'] ?? null,
         'date' => is_string($start) ? substr($start, 0, 10) : null,
         'start_time' => $start,
@@ -402,12 +426,12 @@ function handle_activity(array $config, string $activityId): void
         'activity_eftp' => $a['icu_pm_ftp'] ?? null,
         'w_prime' => $a['icu_w_prime'] ?? null,
         'p_max' => $a['p_max'] ?? null,
-        'max_wbal_depletion' => $a['icu_max_wbal_depletion'] ?? null,
+        'max_wbal_depletion_kj' => joules_to_kj($a['icu_max_wbal_depletion'] ?? null),
 
         // エネルギー
         'weight' => $a['icu_weight'] ?? null,
-        'kj' => $a['icu_joules'] ?? null,
-        'kj_above_ftp' => $a['icu_joules_above_ftp'] ?? null,
+        'kj' => joules_to_kj($a['icu_joules'] ?? null),
+        'kj_above_ftp' => joules_to_kj($a['icu_joules_above_ftp'] ?? null),
         'calories' => $a['calories'] ?? null,
         'carbs_used' => $a['carbs_used'] ?? null,
         'carbs_ingested' => $a['carbs_ingested'] ?? null,
@@ -421,19 +445,16 @@ function handle_activity(array $config, string $activityId): void
         'intervals' => $intervals,
 
         'description' => $a['description'] ?? null,
-    ]);
+    ];
 }
 
 /** パワー/心拍数の分析値（デカップリング・HR lag など）。グラフ用の series / curves は除く。 */
-function handle_power_vs_hr(array $config, string $activityId): void
+function fetch_power_vs_hr(array $config, string $activityId): array
 {
     require_activity_id($activityId);
-    $p = json_decode(icu_get($config, '/activity/' . $activityId . '/power-vs-hr.json', [], REQUEST_TIMEOUT_SEC), true);
-    if (!is_array($p)) {
-        send_error(502, 'unexpected upstream response');
-    }
+    $p = decode_upstream_object(icu_get($config, '/activity/' . $activityId . '/power-vs-hr.json', [], REQUEST_TIMEOUT_SEC));
 
-    send_json(200, [
+    return [
         'pw_hr' => $p['powerHr'] ?? null,
         'pw_hr_first_half' => $p['powerHrFirst'] ?? null,
         'pw_hr_second_half' => $p['powerHrSecond'] ?? null,
@@ -445,7 +466,150 @@ function handle_power_vs_hr(array $config, string $activityId): void
         'warmup' => $p['warmup'] ?? null,
         'cooldown' => $p['cooldown'] ?? null,
         'ratio_coefficients' => $p['ratioCoefficients'] ?? null,
-    ]);
+    ];
+}
+
+/** 整数パラメータ（クエリ文字列の文字列、または MCP の整数）を検証する。未指定なら null */
+function parse_int_param($raw, string $name, int $min, int $max): ?int
+{
+    if ($raw === null || $raw === '') {
+        return null;
+    }
+    if (is_string($raw) && ctype_digit($raw)) {
+        $raw = (int) $raw;
+    }
+    if (!is_int($raw) || $raw < $min || $raw > $max) {
+        throw new ApiError("{$name} must be an integer between {$min} and {$max}", 400);
+    }
+    return $raw;
+}
+
+/** types（カンマ区切り文字列または配列）を検証する。time は間引きの基準なので必ず含める */
+function parse_stream_types($raw): array
+{
+    if ($raw === null || $raw === '' || $raw === []) {
+        return ANALYSIS_STREAM_TYPES;
+    }
+    $types = is_string($raw) ? explode(',', $raw) : $raw;
+    if (!is_array($types)) {
+        throw new ApiError('types must be a list of stream names', 400);
+    }
+    foreach ($types as $type) {
+        if (!is_string($type) || !preg_match('/^[A-Za-z0-9_]{1,40}$/', $type)) {
+            throw new ApiError('types must be a list of stream names', 400);
+        }
+    }
+    if (in_array('latlng', $types, true)) {
+        throw new ApiError('latlng (location) is not available', 400);
+    }
+    $types = array_values(array_unique($types));
+    if (!in_array('time', $types, true)) {
+        array_unshift($types, 'time');
+    }
+    return $types;
+}
+
+/**
+ * 時刻（time ストリームの経過秒）で resolution 秒ごとの区間に分け、区間内の平均をとる。
+ * time と distance は区間の最後の値。null は平均から除き、区間内がすべて null なら null。
+ */
+function downsample_streams(array $columns, array $indices, int $origin, int $resolution): array
+{
+    $groups = [];
+    foreach ($indices as $i) {
+        $groups[intdiv((int) $columns['time'][$i] - $origin, $resolution)][] = $i;
+    }
+
+    $out = array_fill_keys(array_keys($columns), []);
+    foreach ($groups as $members) {
+        foreach ($columns as $type => $data) {
+            if (in_array($type, LAST_VALUE_STREAM_TYPES, true)) {
+                $out[$type][] = $data[end($members)] ?? null;
+                continue;
+            }
+            $sum = 0;
+            $count = 0;
+            foreach ($members as $i) {
+                if (is_int($data[$i] ?? null) || is_float($data[$i] ?? null)) {
+                    $sum += $data[$i];
+                    $count++;
+                }
+            }
+            if ($count === 0) {
+                $out[$type][] = null;
+                continue;
+            }
+            $avg = round($sum / $count, 2);
+            $out[$type][] = $avg == floor($avg) ? (int) $avg : $avg;
+        }
+    }
+    return $out;
+}
+
+/**
+ * 分析用のストリーム（列形式）。resolution 秒ごとに間引き、start_sec〜end_sec（end は含まない）で区間を切り出す。
+ * 応答が STREAM_RESPONSE_BYTES_LIMIT を超えるときは resolution を自動で上げる。
+ */
+function fetch_activity_streams(array $config, string $activityId, array $types, ?int $resolution, ?int $startSec, ?int $endSec): array
+{
+    require_activity_id($activityId);
+    if ($startSec !== null && $endSec !== null && $endSec <= $startSec) {
+        throw new ApiError('end_sec must be greater than start_sec', 400);
+    }
+
+    $raw = decode_upstream_list(icu_get(
+        $config,
+        '/activity/' . $activityId . '/streams.json',
+        ['types' => implode(',', $types)],
+        STREAM_TIMEOUT_SEC
+    ));
+    $available = [];
+    foreach ($raw as $stream) {
+        if (is_array($stream) && is_string($stream['type'] ?? null) && is_array($stream['data'] ?? null)) {
+            $available[$stream['type']] = $stream['data'];
+        }
+    }
+    if (!isset($available['time'])) {
+        throw new ApiError('this activity has no time stream', 404);
+    }
+
+    $columns = [];
+    foreach ($types as $type) {
+        if (isset($available[$type])) {
+            $columns[$type] = $available[$type];
+        }
+    }
+
+    $origin = $startSec ?? 0;
+    $indices = [];
+    foreach ($columns['time'] as $i => $t) {
+        if (is_numeric($t) && $t >= $origin && ($endSec === null || $t < $endSec)) {
+            $indices[] = $i;
+        }
+    }
+
+    $requested = $resolution ?? ($startSec !== null || $endSec !== null ? 1 : 5);
+    $used = $requested;
+    while (true) {
+        $streams = downsample_streams($columns, $indices, $origin, $used);
+        $bytes = strlen(json_encode($streams));
+        if ($bytes <= STREAM_RESPONSE_BYTES_LIMIT || $used >= MAX_STREAM_RESOLUTION) {
+            break;
+        }
+        $used = min(MAX_STREAM_RESOLUTION, max($used + 1, (int) ceil($used * $bytes / STREAM_RESPONSE_BYTES_LIMIT * 1.05)));
+    }
+
+    $times = $streams['time'];
+    return [
+        'activity_id' => $activityId,
+        'resolution' => $used,
+        'requested_resolution' => $requested,
+        'start_sec' => $indices ? (int) $columns['time'][$indices[0]] : null,
+        'end_sec' => $times ? end($times) : null,
+        'n' => count($times),
+        'missing_types' => array_values(array_diff($types, array_keys($columns))),
+        'streams' => $streams,
+    ];
 }
 
 function handle_streams(array $config, string $activityId): void
@@ -453,13 +617,196 @@ function handle_streams(array $config, string $activityId): void
     require_activity_id($activityId);
     $types = $_GET['types'] ?? DEFAULT_STREAM_TYPES;
     if (!is_string($types) || !preg_match('/^[A-Za-z0-9_]+(,[A-Za-z0-9_]+)*$/', $types)) {
-        send_error(400, 'types must be a comma separated list of stream names');
+        throw new ApiError('types must be a comma separated list of stream names', 400);
     }
 
     $body = icu_get($config, '/activity/' . $activityId . '/streams', ['types' => $types], STREAM_TIMEOUT_SEC);
     http_response_code(200);
     echo $body;
     exit;
+}
+
+// ---------------------------------------------------------------------------
+// MCP サーバー（Streamable HTTP。SSE は使わず JSON で応答する）
+// ---------------------------------------------------------------------------
+
+function mcp_tools(): array
+{
+    $days = static fn(int $default): array => [
+        'type' => 'integer',
+        'minimum' => 1,
+        'maximum' => MAX_DAYS,
+        'default' => $default,
+        'description' => "今日から遡る日数（既定 {$default}）",
+    ];
+    $activityId = [
+        'type' => 'string',
+        'description' => 'アクティビティ ID（list_activities の id。例 i204425268）',
+    ];
+    $readOnly = ['readOnlyHint' => true, 'openWorldHint' => false];
+
+    return [
+        [
+            'name' => 'list_activities',
+            'title' => 'アクティビティ一覧',
+            'description' => '直近 n 日のアクティビティ一覧（NP・TSS・IF・デカップリング・心拍・kJ 等）。新しい順。'
+                . 'Strava 経由で取り込まれたアクティビティは id と date 以外が null。',
+            'inputSchema' => ['type' => 'object', 'properties' => ['days' => $days(7)]],
+            'annotations' => $readOnly,
+        ],
+        [
+            'name' => 'get_activity',
+            'title' => 'アクティビティ詳細',
+            'description' => '1件のアクティビティ詳細（負荷・SS・パワー・心拍・CTL/ATL・FTP/eFTP・W\'・エネルギー・ゾーン時間・インターバル表）。'
+                . '距離は m、時間は秒、速度は m/s、勾配は比率（0.05 = 5%）。',
+            'inputSchema' => [
+                'type' => 'object',
+                'properties' => ['activity_id' => $activityId],
+                'required' => ['activity_id'],
+            ],
+            'annotations' => $readOnly,
+        ],
+        [
+            'name' => 'get_power_vs_hr',
+            'title' => 'パワー/心拍数の分析',
+            'description' => 'パワー/心拍数（全体・前半・後半）、有酸素デカップリング（%）、HR lag（秒）、Z2 効率。',
+            'inputSchema' => [
+                'type' => 'object',
+                'properties' => ['activity_id' => $activityId],
+                'required' => ['activity_id'],
+            ],
+            'annotations' => $readOnly,
+        ],
+        [
+            'name' => 'get_activity_streams',
+            'title' => 'ストリーム（秒ごとのデータ）',
+            'description' => 'ライドの時系列データを列形式で返す（深掘り用）。区間ごとの心拍の上がり方、高強度区間の特定、同じパワーでの心拍比較などに使う。'
+                . 'time は経過秒（停止中は記録されない）。resolution 秒ごとに区間の平均（time・distance は区間の最後の値）。null は欠損。'
+                . 'watts=W、heartrate=bpm、cadence=rpm、velocity_smooth=m/s、altitude=m、distance=m。'
+                . '応答が約 100KB を超えると resolution を自動で上げ、実際の値を resolution に返す。',
+            'inputSchema' => [
+                'type' => 'object',
+                'properties' => [
+                    'activity_id' => $activityId,
+                    'types' => [
+                        'type' => 'array',
+                        'items' => ['type' => 'string'],
+                        'description' => '取得するストリーム（既定 ' . implode(', ', ANALYSIS_STREAM_TYPES) . '）。time は常に含まれる',
+                    ],
+                    'resolution' => [
+                        'type' => 'integer',
+                        'minimum' => 1,
+                        'maximum' => MAX_STREAM_RESOLUTION,
+                        'description' => '何秒ごとに間引くか（既定 5。start_sec / end_sec を指定したときは既定 1）',
+                    ],
+                    'start_sec' => [
+                        'type' => 'integer',
+                        'minimum' => 0,
+                        'description' => '区間の開始（経過秒、この値を含む）',
+                    ],
+                    'end_sec' => [
+                        'type' => 'integer',
+                        'minimum' => 1,
+                        'description' => '区間の終了（経過秒、この値を含まない）',
+                    ],
+                ],
+                'required' => ['activity_id'],
+            ],
+            'annotations' => $readOnly,
+        ],
+        [
+            'name' => 'list_wellness',
+            'title' => 'コンディション',
+            'description' => '直近 n 日の日別 CTL（フィットネス）・ATL（ファティーグ）・フォーム・体重・安静時心拍・HRV・睡眠秒。古い順。',
+            'inputSchema' => ['type' => 'object', 'properties' => ['days' => $days(14)]],
+            'annotations' => $readOnly,
+        ],
+    ];
+}
+
+function mcp_call_tool(array $config, string $name, array $args): array
+{
+    switch ($name) {
+        case 'list_activities':
+            return fetch_activities($config, parse_days($args['days'] ?? null, 7));
+        case 'get_activity':
+            return fetch_activity($config, (string) ($args['activity_id'] ?? ''));
+        case 'get_power_vs_hr':
+            return fetch_power_vs_hr($config, (string) ($args['activity_id'] ?? ''));
+        case 'get_activity_streams':
+            return fetch_activity_streams(
+                $config,
+                (string) ($args['activity_id'] ?? ''),
+                parse_stream_types($args['types'] ?? null),
+                parse_int_param($args['resolution'] ?? null, 'resolution', 1, MAX_STREAM_RESOLUTION),
+                parse_int_param($args['start_sec'] ?? null, 'start_sec', 0, MAX_STREAM_START_SEC),
+                parse_int_param($args['end_sec'] ?? null, 'end_sec', 1, MAX_STREAM_START_SEC)
+            );
+        case 'list_wellness':
+            return fetch_wellness($config, parse_days($args['days'] ?? null, 14));
+    }
+    throw new ApiError('unknown tool: ' . $name, 404);
+}
+
+function mcp_respond($id, array $payload): void
+{
+    send_json(200, ['jsonrpc' => '2.0', 'id' => $id] + $payload);
+}
+
+function handle_mcp(array $config): void
+{
+    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+        // サーバーからのイベントストリーム（GET）は提供しない
+        header('Allow: POST');
+        send_error(405, 'method not allowed');
+    }
+
+    $req = json_decode((string) file_get_contents('php://input'), true);
+    if (!is_array($req) || array_is_list($req)) {
+        send_json(400, ['jsonrpc' => '2.0', 'id' => null, 'error' => ['code' => -32700, 'message' => 'parse error']]);
+    }
+
+    // 通知（id なし）には応答本文を返さない
+    if (!array_key_exists('id', $req)) {
+        http_response_code(202);
+        exit;
+    }
+
+    $params = is_array($req['params'] ?? null) ? $req['params'] : [];
+    mcp_respond($req['id'], mcp_dispatch($config, (string) ($req['method'] ?? ''), $params));
+}
+
+/** JSON-RPC のメソッドを処理し、result または error を返す */
+function mcp_dispatch(array $config, string $method, array $params): array
+{
+    switch ($method) {
+        case 'initialize':
+            $requested = $params['protocolVersion'] ?? '';
+            return ['result' => [
+                'protocolVersion' => in_array($requested, MCP_PROTOCOL_VERSIONS, true) ? $requested : MCP_PROTOCOL_VERSIONS[0],
+                'capabilities' => ['tools' => ['listChanged' => false]],
+                'serverInfo' => ['name' => 'icu-proxy', 'version' => '1.0.0'],
+                'instructions' => 'intervals.icu のサイクリングトレーニングデータ（読み取り専用）。'
+                    . '数値は intervals.icu が計算した値で、null は未計算・未入力を表すので推測で埋めないこと。',
+            ]];
+        case 'ping':
+            return ['result' => new stdClass()];
+        case 'tools/list':
+            return ['result' => ['tools' => mcp_tools()]];
+        case 'tools/call':
+            $args = is_array($params['arguments'] ?? null) ? $params['arguments'] : [];
+            try {
+                $data = mcp_call_tool($config, (string) ($params['name'] ?? ''), $args);
+                $text = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                return ['result' => ['content' => [['type' => 'text', 'text' => $text]]]];
+            } catch (ApiError $e) {
+                return ['result' => [
+                    'content' => [['type' => 'text', 'text' => 'エラー（HTTP ' . $e->getCode() . '）: ' . $e->getMessage()]],
+                    'isError' => true,
+                ]];
+            }
+    }
+    return ['error' => ['code' => -32601, 'message' => 'method not found']];
 }
 
 // ---------------------------------------------------------------------------
@@ -482,10 +829,6 @@ if ($method === 'OPTIONS') {
     http_response_code(204);
     exit;
 }
-if ($method !== 'GET') {
-    header('Allow: GET, OPTIONS');
-    send_error(405, 'method not allowed');
-}
 
 foreach (['ICU_API_KEY', 'ICU_ATHLETE_ID', 'PROXY_TOKEN'] as $required) {
     if (empty($config[$required])) {
@@ -493,8 +836,6 @@ foreach (['ICU_API_KEY', 'ICU_ATHLETE_ID', 'PROXY_TOKEN'] as $required) {
         send_error(500, 'server is not configured');
     }
 }
-
-require_client_auth($config);
 
 // 設置ディレクトリ（例: /icu-proxy）からの相対パスを取り出す
 $requestPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
@@ -504,16 +845,57 @@ if ($baseDir !== '' && str_starts_with($requestPath, $baseDir . '/')) {
 }
 $requestPath = '/' . trim($requestPath, '/');
 
-if ($requestPath === '/activities') {
-    handle_activities($config);
-} elseif ($requestPath === '/wellness') {
-    handle_wellness($config);
-} elseif (preg_match('#^/activity/([^/]+)/power-vs-hr$#', $requestPath, $m)) {
-    handle_power_vs_hr($config, rawurldecode($m[1]));
-} elseif (preg_match('#^/activity/([^/]+)$#', $requestPath, $m)) {
-    handle_activity($config, rawurldecode($m[1]));
-} elseif (preg_match('#^/streams/([^/]+)$#', $requestPath, $m)) {
-    handle_streams($config, rawurldecode($m[1]));
+// MCP: Bearer トークン、または URL に埋め込んだ秘密の文字列（32 文字以上のときだけ有効）で認証する
+if ($requestPath === '/mcp') {
+    require_client_auth($config);
+    handle_mcp($config);
+}
+if (preg_match('#^/mcp/([^/]+)$#', $requestPath, $m)) {
+    $secret = $config['MCP_URL_SECRET'] ?? '';
+    if (strlen($secret) < 32 || !hash_equals($secret, rawurldecode($m[1]))) {
+        send_error(404, 'not found');
+    }
+    handle_mcp($config);
+}
+
+if ($method !== 'GET') {
+    header('Allow: GET, OPTIONS');
+    send_error(405, 'method not allowed');
+}
+
+require_client_auth($config);
+
+try {
+    $days = $_GET['days'] ?? null;
+    if ($requestPath === '/activities') {
+        send_json(200, fetch_activities($config, parse_days($days, 7)));
+    } elseif ($requestPath === '/wellness') {
+        send_json(200, fetch_wellness($config, parse_days($days, 14)));
+    } elseif (preg_match('#^/activity/([^/]+)/streams$#', $requestPath, $m)) {
+        send_json(200, fetch_activity_streams(
+            $config,
+            rawurldecode($m[1]),
+            parse_stream_types($_GET['types'] ?? null),
+            parse_int_param($_GET['resolution'] ?? null, 'resolution', 1, MAX_STREAM_RESOLUTION),
+            parse_int_param($_GET['start_sec'] ?? null, 'start_sec', 0, MAX_STREAM_START_SEC),
+            parse_int_param($_GET['end_sec'] ?? null, 'end_sec', 1, MAX_STREAM_START_SEC)
+        ));
+    } elseif (preg_match('#^/activity/([^/]+)/power-vs-hr$#', $requestPath, $m)) {
+        send_json(200, fetch_power_vs_hr($config, rawurldecode($m[1])));
+    } elseif (preg_match('#^/activity/([^/]+)$#', $requestPath, $m)) {
+        $activityId = rawurldecode($m[1]);
+        if (($_GET['raw'] ?? '') === '1') {
+            // フィールド名の確認用に intervals.icu の応答をそのまま返す
+            http_response_code(200);
+            echo fetch_activity_raw($config, $activityId);
+            exit;
+        }
+        send_json(200, fetch_activity($config, $activityId));
+    } elseif (preg_match('#^/streams/([^/]+)$#', $requestPath, $m)) {
+        handle_streams($config, rawurldecode($m[1]));
+    }
+} catch (ApiError $e) {
+    send_error($e->getCode(), $e->getMessage());
 }
 
 send_error(404, 'not found');
