@@ -180,3 +180,22 @@ claude.ai での登録: カスタマイズ → コネクタ → カスタムコ�
 
 - 403 が想定外に返る場合は、さくらの WAF が誤検知している可能性がある。コントロールパネルの WAF ログを確認し、必要なら除外設定をする。
 - API キーをレスポンスやログに出さないようにしている。`error_log` に出るのは curl のエラー番号とパスだけ。
+
+
+## GA4（VeloAva の利用状況）を読む設定
+
+`ga_summary` / `ga_funnel` / `ga_predicted_types` / `ga_trend` を使うための初回設定。intervals.icu 側の設定とは独立している。
+
+1. **Google Cloud でサービスアカウントを作る**
+   1. https://console.cloud.google.com/ でプロジェクトを選ぶ（なければ作る）
+   2. 「API とサービス → ライブラリ」で **Google Analytics Data API** を有効にする
+   3. 「IAM と管理 → サービスアカウント → 作成」。名前は `veloava-ga` など。ロールの付与は不要
+   4. 作ったサービスアカウントの「キー → 鍵を追加 → 新しい鍵を作成 → JSON」でファイルをダウンロード
+2. **GA にサービスアカウントを追加する**: GA4 の「管理 → プロパティのアクセス管理 → ＋ → ユーザーを追加」に、サービスアカウントのメールアドレス（`...@...iam.gserviceaccount.com`）を **閲覧者** で追加する
+3. **プロパティ ID を控える**: GA4 の「管理 → プロパティの詳細」の数字（`G-` で始まる測定 ID ではない）
+4. **さくらに置く**
+   - 鍵 JSON を `~/ga-service-account.json` としてアップロードし `chmod 600 ~/ga-service-account.json`（公開ディレクトリ `~/www` の外）
+   - `~/icu-proxy.env` に `GA_PROPERTY_ID=<数字>` を追記
+5. **確認**: `curl -H "Authorization: Bearer $PROXY_TOKEN" https://aoshika.net/icu-proxy/ga/summary` で JSON が返れば OK。claude.ai のコネクタを再接続すると `ga_*` ツールが出る
+
+`ga_predicted_types` を使うには、GA4 の「管理 → カスタム定義」でイベント単位のカスタムディメンション `predicted_type`（イベントパラメータ `predicted_type`）を登録しておく。
