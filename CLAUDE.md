@@ -108,6 +108,10 @@ Strava API Policy 5.3条により、Strava Data（APIで取得した全データ
 - 診断は1回きりの用途なので、アクティビティ取得後に成否に関わらず `revokeToken()`（`POST /oauth/revoke`）で連携を解除し、接続アスリート枠を空ける。旧 `/oauth/deauthorize` は2027-06-01で廃止されるため使わない
 - アクティビティ取得: 最大200件/リクエスト（ページネーションは未実装）
 
+## sakura-api
+
+`sakura-api/` は VeloAva とは別の、intervals.icu プロキシ兼 MCP サーバー（PHP、さくらのレンタルサーバで稼働、claude.ai のコネクタ `sakura_icu_api`）。仕様・認証・デプロイ手順は `sakura-api/CLAUDE.md` にまとめている。Next.js のビルドには関係しない。
+
 ## デプロイ
 
 Vercel（無料プラン対応）。環境変数4つをVercelダッシュボードで設定し、`NEXT_PUBLIC_BASE_URL` をVercelの割り当てURLに合わせる。GitHubプッシュで自動デプロイ。本番URL: https://veloava.vercel.app
