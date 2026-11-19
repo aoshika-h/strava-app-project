@@ -35,6 +35,28 @@ function normalize(value: number, min: number, max: number): number {
   return Math.min(100, Math.max(0, Math.round(((value - min) / (max - min)) * 100)))
 }
 
+// 各キャラへの適合度（0〜100）を求めて最大のキャラを選ぶ
+// 入力の数でキャラ間に差が出ないよう、どのキャラも重みの合計を1にした加重平均で比べる
+export function pickCharacter(scores: AnalysisResult['scores'], hasPower: boolean): CharacterId {
+  const { climbing, speed, endurance, consistency } = scores
+  const power = hasPower ? scores.power : speed
+  const riding = [climbing, speed, endurance, consistency]
+  const mean = riding.reduce((a, b) => a + b, 0) / riding.length
+  const spread = Math.max(...riding) - Math.min(...riding)
+
+  const affinity: Record<CharacterId, number> = {
+    climber: 0.8 * climbing + 0.2 * power,
+    granfondo: 0.75 * endurance + 0.25 * climbing,
+    tt: 0.5 * speed + 0.2 * endurance + 0.3 * power,
+    sprinter: 0.7 * speed + 0.3 * (100 - endurance) - 8,
+    // 突出した能力がなく、どれもそこそこ以上
+    allrounder: mean - 0.6 * spread + 25,
+    // 乗る頻度が低くてもロング派はグランフォンドを優先したいので少し弱める
+    weekend: 0.85 * (100 - consistency),
+  }
+  return (Object.entries(affinity) as [CharacterId, number][]).reduce((best, curr) => (curr[1] > best[1] ? curr : best))[0]
+}
+
 // メイン分析関数
 // activities: 取得したStravaアクティビティ配列
 // athlete: アスリートプロフィール
@@ -83,70 +105,18 @@ export function analyzeCharacter(
       ? powerRides.reduce((s, r) => s + (r.average_watts || 0), 0) / powerRides.length
       : 0
 
-  // ---- レーダーチャート用スコア計算 ----
-  // 各スコアは実測値を一般的な範囲で正規化（0〜100）
-
+  // ---- レーダーチャート用スコア（0〜100）----
+  // 範囲は一般的なロード乗りの分布に合わせる（端の値ほど個性が強い）
+  const hasPower = avgWatts > 0
   const scores = {
-    climbing: normalize(climbingRatio, 2, 30),    // 2〜30 m/km が目安
-    speed: normalize(avgSpeed, 18, 42),            // 18〜42 km/h
-    endurance: normalize(avgDistance, 20, 150),    // 20〜150 km
-    power: avgWatts > 0 ? normalize(avgWatts, 100, 350) : normalize(avgSpeed, 20, 40), // パワーがなければ速度で代替
-    consistency: normalize(ridingDaysPerWeek, 0.5, 7), // 週0.5〜7日
+    climbing: normalize(climbingRatio, 3, 18),         // 3〜18 m/km
+    speed: normalize(avgSpeed, 20, 34),                // 20〜34 km/h
+    endurance: normalize(avgDistance, 20, 120),        // 20〜120 km
+    power: hasPower ? normalize(avgWatts, 120, 280) : normalize(avgSpeed, 20, 34), // パワーがなければ速度で代替
+    consistency: normalize(ridingDaysPerWeek, 0.5, 6), // 週0.5〜6日
   }
 
-  // ---- キャラクタータイプの判定 ----
-  // 各キャラクターへの適合スコアを指標ごとに積み上げ、最大値を選ぶ
-  // 人為的な優先順位を排除し、データが判定を決める
-
-  const charScores: Record<CharacterId, number> = {
-    climber:    0,
-    sprinter:   0,
-    tt:         0,
-    granfondo:  0,
-    allrounder: 0,
-    weekend:    0,
-  }
-
-  // 登坂比率 → クライマー・グランフォンドに加点
-  const climbScore = normalize(climbingRatio, 2, 30)
-  charScores.climber    += climbScore * 2.0  // 登坂はクライマーの主指標なので重み2倍
-  charScores.granfondo  += climbScore * 0.5  // グランフォンドも山を走ることがある
-
-  // 平均距離 → グランフォンド・TTに加点
-  const distScore = normalize(avgDistance, 20, 150)
-  charScores.granfondo  += distScore * 2.0   // 長距離はグランフォンドの主指標
-  charScores.tt         += distScore * 0.8
-  charScores.allrounder += distScore * 0.5
-
-  // 平均速度 → スプリンター・TTに加点
-  const speedScore = normalize(avgSpeed, 18, 42)
-  charScores.sprinter   += speedScore * 1.5
-  charScores.tt         += speedScore * 1.5  // TTは速度が主指標
-  charScores.allrounder += speedScore * 0.5
-
-  // 短距離補正: 距離が短いほどスプリンター寄り、長いほどTT・グランフォンド寄り
-  const shortBias = normalize(60 - avgDistance, -90, 60) // 距離が短いと高スコア
-  charScores.sprinter   += shortBias * 1.0
-
-  // 頻度の低さ → サンデーライダーに加点（頻度が低いほど高スコア）
-  const lowFreqScore = normalize(3 - ridingDaysPerWeek, -4, 3)
-  charScores.weekend    += lowFreqScore * 2.0
-
-  // 頻度の高さ → オールラウンダー・TTに加点
-  const freqScore = normalize(ridingDaysPerWeek, 0.5, 7)
-  charScores.allrounder += freqScore * 1.0
-  charScores.tt         += freqScore * 0.5
-
-  // パワー → TT・クライマーに加点（パワーメーターがある場合のみ）
-  if (avgWatts > 0) {
-    const powerScore = normalize(avgWatts, 100, 350)
-    charScores.tt      += powerScore * 1.0
-    charScores.climber += powerScore * 0.5
-  }
-
-  // 各キャラクターのスコアが最大のものを選択
-  const characterId = (Object.entries(charScores) as [CharacterId, number][])
-    .reduce((best, curr) => curr[1] > best[1] ? curr : best)[0]
+  const characterId = pickCharacter(scores, hasPower)
 
   return buildResult(
     characterId,
