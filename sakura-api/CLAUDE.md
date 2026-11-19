@@ -58,6 +58,24 @@ claude.ai のカスタムコネクタ（`sakura_icu_api`）として登録済み
 - 20 分ベスト 231.8W（経過 19,052〜20,252 秒、90.2km → 100.9km）
 - streams: `resolution=10` 全体で 81.0KB・1,973 点。`start_sec=19052&end_sec=20852`（30 分）で 62.6KB・1,761 点・resolution 1。既定（5）の全体は 100KB を超えて 9 に上がる
 
+## GA4（VeloAva の利用状況）
+
+`ga_*` ツールは VeloAva（Next.js）の GA4 を読み取り専用で返す。intervals.icu とは無関係で、同じコネクタに相乗りさせている。
+
+- 認証: サービスアカウントの JWT（RS256、`openssl_sign`）をトークンに交換し、GA4 Data API の `batchRunReports` を呼ぶ。Composer 不要
+- 設定: `GA_PROPERTY_ID`（数字のプロパティ ID）と、鍵ファイル `GA_SA_KEY_FILE`（既定 `/home/aoshika-h/ga-service-account.json`、公開ディレクトリの外、600）。未設定なら `ga_*` は 503 を返し、intervals.icu 側には影響しない
+- サービスアカウントは GA プロパティに「閲覧者」で追加する。スコープは `analytics.readonly`
+- **Strava API Policy 5.4**: 診断結果のキャラ別の集計は返さない。キャラ紹介ページ `/c/{characterId}_{sex}` は `BEGINS_WITH /c/` で必ず合計にまとめ、`pagePath` をディメンションとして要求しない。新しいツールを足すときもこれを守る
+
+| MCP ツール | REST | 内容 |
+|---|---|---|
+| `ga_summary(days=7)` | `GET /ga/summary` | ユーザー数・新規・セッション・PV、VeloAva のイベント別の回数とユーザー数 |
+| `ga_funnel(days=7)` | `GET /ga/funnel` | トップ → 診断開始 → 結果 → Xポスト、キャラ紹介ページ（合計）→ 診断CTA のユーザー数と転換率 |
+| `ga_predicted_types(days=28)` | `GET /ga/predicted-types` | 予想タイプ別の診断開始。GA にイベント単位のカスタムディメンション `predicted_type` の登録が必要 |
+| `ga_trend(days=14)` | `GET /ga/trend` | 日別のアクティブユーザーと diagnosis_start / share_x / share_page_cta |
+
+`days` は今日を含む n 日（GA プロパティのタイムゾーン基準）。テストは `GA_DATA_API_BASE` と鍵 JSON の `token_uri` をモックに向けて `php -S` で行う。
+
 ## デプロイ
 
 - オーナーの Windows のリポジトリ（`strava-api`。中身は `public/` だけ）から `git push origin master` → さくらのベアリポジトリ（`~/git/icu-proxy.git`）の `post-receive` が `public/` を `~/www/icu-proxy/` に展開する。Claude からはさくらへ直接 push できない（クラウド環境は SSH 不可）ので、変更後は `public/index.php` をファイルで渡してオーナーに push してもらう

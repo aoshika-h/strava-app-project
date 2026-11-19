@@ -32,6 +32,11 @@ const REQUEST_TIMEOUT_SEC = 20;
 const STREAM_TIMEOUT_SEC = 40;
 const MAX_RETRIES = 2;
 const MCP_PROTOCOL_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
+// テストでモックに向けられるよう環境変数で差し替え可能にしている
+define('GA_DATA_API_BASE', getenv('GA_DATA_API_BASE') ?: 'https://analyticsdata.googleapis.com/v1beta');
+const GA_SCOPE = 'https://www.googleapis.com/auth/analytics.readonly';
+// VeloAva が送っている GA4 イベント（CLAUDE.md の「GA4 計測」と揃える）
+const GA_APP_EVENTS = ['diagnosis_start', 'share_x', 'share_card', 'retry_diagnosis', 'share_page_cta', 'ui_click'];
 
 /** クライアントに返すエラー（HTTP ステータスを code に持つ） */
 final class ApiError extends RuntimeException
@@ -54,7 +59,7 @@ function joules_to_kj($joules): ?float
  */
 function load_config(): array
 {
-    $keys = ['ICU_API_KEY', 'ICU_ATHLETE_ID', 'PROXY_TOKEN', 'MCP_URL_SECRET', 'CORS_ALLOWED_ORIGINS', 'ICU_TIMEZONE'];
+    $keys = ['ICU_API_KEY', 'ICU_ATHLETE_ID', 'PROXY_TOKEN', 'MCP_URL_SECRET', 'CORS_ALLOWED_ORIGINS', 'ICU_TIMEZONE', 'GA_PROPERTY_ID', 'GA_SA_KEY_FILE'];
     $config = [];
     foreach ($keys as $key) {
         $value = getenv($key);
@@ -627,6 +632,297 @@ function handle_streams(array $config, string $activityId): void
 }
 
 // ---------------------------------------------------------------------------
+// Google Analytics 4（VeloAva の利用状況。読み取り専用）
+// ---------------------------------------------------------------------------
+// Strava API Policy 5.4 により、診断結果（キャラ）別の集計は返さない。
+// キャラ紹介ページ /c/{characterId}_{sex} は必ず合計にまとめ、ページ単位の内訳を出さない。
+
+/** サービスアカウント鍵（JSON）のパス。既定はドキュメントルートの親（公開ディレクトリの外） */
+function ga_key_file(array $config): string
+{
+    if (!empty($config['GA_SA_KEY_FILE'])) {
+        return $config['GA_SA_KEY_FILE'];
+    }
+    $docRoot = $_SERVER['DOCUMENT_ROOT'] ?? '';
+    return $docRoot !== '' ? dirname(rtrim($docRoot, '/')) . '/ga-service-account.json' : '';
+}
+
+function ga_require_config(array $config): void
+{
+    if (empty($config['GA_PROPERTY_ID']) || !ctype_digit((string) $config['GA_PROPERTY_ID'])) {
+        throw new ApiError('GA is not configured (GA_PROPERTY_ID)', 503);
+    }
+    $file = ga_key_file($config);
+    if ($file === '' || !is_readable($file)) {
+        throw new ApiError('GA is not configured (service account key file)', 503);
+    }
+}
+
+function base64url(string $data): string
+{
+    return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+}
+
+/** POST して [status, body] を返す。接続失敗・429・5xx はリトライし、最後まで失敗したら ApiError */
+function ga_post(string $url, array $headers, string $body, string $label): array
+{
+    for ($attempt = 0; ; $attempt++) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $body,
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_CONNECTTIMEOUT => CONNECT_TIMEOUT_SEC,
+            CURLOPT_TIMEOUT => REQUEST_TIMEOUT_SEC,
+            CURLOPT_ENCODING => '',
+            CURLOPT_USERAGENT => 'icu-proxy/1.0',
+        ]);
+        $res = curl_exec($ch);
+        $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+        $errno = curl_errno($ch);
+        curl_close($ch);
+
+        $retryable = $res === false || $status === 429 || $status >= 500;
+        if ($retryable && $attempt < MAX_RETRIES) {
+            usleep((int) (500000 * (2 ** $attempt)));
+            continue;
+        }
+        break;
+    }
+    if ($res === false) {
+        error_log('icu-proxy: ' . $label . ' request failed (curl errno ' . $errno . ')');
+        throw new ApiError($label . ' request failed', $errno === CURLE_OPERATION_TIMEDOUT ? 504 : 502);
+    }
+    return [$status, $res];
+}
+
+/** サービスアカウントの JWT をアクセストークンに交換する（1リクエスト内ではキャッシュ） */
+function ga_access_token(array $config): string
+{
+    static $token = null;
+    if ($token !== null) {
+        return $token;
+    }
+    $key = json_decode((string) file_get_contents(ga_key_file($config)), true);
+    if (!is_array($key) || empty($key['client_email']) || empty($key['private_key'])) {
+        throw new ApiError('GA service account key is invalid', 503);
+    }
+    $tokenUri = $key['token_uri'] ?? 'https://oauth2.googleapis.com/token';
+    $now = time();
+    $unsigned = base64url(json_encode(['alg' => 'RS256', 'typ' => 'JWT']))
+        . '.' . base64url(json_encode([
+            'iss' => $key['client_email'],
+            'scope' => GA_SCOPE,
+            'aud' => $tokenUri,
+            'iat' => $now,
+            'exp' => $now + 3600,
+        ]));
+    $privateKey = openssl_pkey_get_private($key['private_key']);
+    if ($privateKey === false || !openssl_sign($unsigned, $signature, $privateKey, OPENSSL_ALGO_SHA256)) {
+        throw new ApiError('GA service account key could not be used for signing', 503);
+    }
+    [$status, $body] = ga_post($tokenUri, ['Content-Type: application/x-www-form-urlencoded'], http_build_query([
+        'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+        'assertion' => $unsigned . '.' . base64url($signature),
+    ]), 'GA token');
+    $decoded = json_decode($body, true);
+    if ($status >= 400 || empty($decoded['access_token'])) {
+        // 応答に鍵やトークンは含まれないが、念のため本文は返さず種類だけ伝える
+        throw new ApiError('GA authentication failed: ' . ($decoded['error'] ?? 'HTTP ' . $status), 502);
+    }
+    return $token = $decoded['access_token'];
+}
+
+/** batchRunReports（最大5レポート）を1回で呼ぶ */
+function ga_batch_reports(array $config, array $requests): array
+{
+    ga_require_config($config);
+    $url = GA_DATA_API_BASE . '/properties/' . $config['GA_PROPERTY_ID'] . ':batchRunReports';
+    [$status, $body] = ga_post($url, [
+        'Authorization: Bearer ' . ga_access_token($config),
+        'Content-Type: application/json',
+    ], json_encode(['requests' => $requests], JSON_UNESCAPED_SLASHES), 'GA report');
+    $decoded = json_decode($body, true);
+    if ($status >= 400) {
+        $message = is_array($decoded) ? ($decoded['error']['message'] ?? 'HTTP ' . $status) : 'HTTP ' . $status;
+        throw new ApiError('GA API error: ' . $message, $status);
+    }
+    if (!is_array($decoded) || !isset($decoded['reports']) || !is_array($decoded['reports'])) {
+        throw new ApiError('unexpected GA response', 502);
+    }
+    return $decoded['reports'];
+}
+
+function ga_date_range(int $days): array
+{
+    // GA の「今日」はプロパティのタイムゾーン基準
+    return [['startDate' => ($days - 1) . 'daysAgo', 'endDate' => 'today']];
+}
+
+function ga_event_filter(array $names): array
+{
+    return ['filter' => ['fieldName' => 'eventName', 'inListFilter' => ['values' => $names]]];
+}
+
+function ga_page_filter(string $matchType, string $value): array
+{
+    return ['filter' => ['fieldName' => 'pagePath', 'stringFilter' => ['matchType' => $matchType, 'value' => $value]]];
+}
+
+/** レポートの行を [ディメンション値 => [指標...]] に変換する（ディメンションなしは '' キー） */
+function ga_rows(array $report): array
+{
+    $out = [];
+    foreach ($report['rows'] ?? [] as $row) {
+        $key = implode('|', array_map(static fn($d) => $d['value'] ?? '', $row['dimensionValues'] ?? []));
+        $out[$key] = array_map(static fn($m) => (int) ($m['value'] ?? 0), $row['metricValues'] ?? []);
+    }
+    return $out;
+}
+
+function ga_rate(int $num, int $den): ?float
+{
+    return $den > 0 ? round($num / $den * 100, 1) : null;
+}
+
+/** ユーザー数・セッション・PV と、VeloAva のイベントの回数・ユーザー数 */
+function fetch_ga_summary(array $config, int $days): array
+{
+    [$totals, $events] = ga_batch_reports($config, [
+        [
+            'dateRanges' => ga_date_range($days),
+            'metrics' => [['name' => 'activeUsers'], ['name' => 'newUsers'], ['name' => 'sessions'], ['name' => 'screenPageViews']],
+        ],
+        [
+            'dateRanges' => ga_date_range($days),
+            'dimensions' => [['name' => 'eventName']],
+            'metrics' => [['name' => 'eventCount'], ['name' => 'totalUsers']],
+            'dimensionFilter' => ga_event_filter(GA_APP_EVENTS),
+        ],
+    ]);
+    $t = ga_rows($totals)[''] ?? [0, 0, 0, 0];
+    $e = ga_rows($events);
+    $eventOut = [];
+    foreach (GA_APP_EVENTS as $name) {
+        $eventOut[$name] = ['count' => $e[$name][0] ?? 0, 'users' => $e[$name][1] ?? 0];
+    }
+    return [
+        'days' => $days,
+        'active_users' => $t[0],
+        'new_users' => $t[1],
+        'sessions' => $t[2],
+        'page_views' => $t[3],
+        'events' => $eventOut,
+    ];
+}
+
+/** 診断の流れ（ユーザー数）と、キャラ紹介ページからの流入（/c/ はページ別にせず合計） */
+function fetch_ga_funnel(array $config, int $days): array
+{
+    $pageUsers = static fn(array $filter): array => [
+        'dateRanges' => ga_date_range($days),
+        'metrics' => [['name' => 'totalUsers'], ['name' => 'screenPageViews']],
+        'dimensionFilter' => ['andGroup' => ['expressions' => [
+            ['filter' => ['fieldName' => 'eventName', 'stringFilter' => ['matchType' => 'EXACT', 'value' => 'page_view']]],
+            $filter,
+        ]]],
+    ];
+    [$top, $result, $share, $events] = ga_batch_reports($config, [
+        $pageUsers(ga_page_filter('EXACT', '/')),
+        $pageUsers(ga_page_filter('EXACT', '/result')),
+        $pageUsers(ga_page_filter('BEGINS_WITH', '/c/')),
+        [
+            'dateRanges' => ga_date_range($days),
+            'dimensions' => [['name' => 'eventName']],
+            'metrics' => [['name' => 'totalUsers']],
+            'dimensionFilter' => ga_event_filter(['diagnosis_start', 'share_x', 'share_page_cta']),
+        ],
+    ]);
+    $users = static fn(array $report): int => (ga_rows($report)[''][0] ?? 0);
+    $e = ga_rows($events);
+    $topUsers = $users($top);
+    $startUsers = $e['diagnosis_start'][0] ?? 0;
+    $resultUsers = $users($result);
+    $shareXUsers = $e['share_x'][0] ?? 0;
+    $sharePageUsers = $users($share);
+    $ctaUsers = $e['share_page_cta'][0] ?? 0;
+
+    return [
+        'days' => $days,
+        'note' => 'users はステップごとのユーザー数（GA の totalUsers）。rate は前のステップに対する %',
+        'diagnosis' => [
+            ['step' => 'トップ閲覧', 'users' => $topUsers, 'rate' => null],
+            ['step' => '診断開始（diagnosis_start）', 'users' => $startUsers, 'rate' => ga_rate($startUsers, $topUsers)],
+            ['step' => '結果ページ表示', 'users' => $resultUsers, 'rate' => ga_rate($resultUsers, $startUsers)],
+            ['step' => 'Xでポスト（share_x）', 'users' => $shareXUsers, 'rate' => ga_rate($shareXUsers, $resultUsers)],
+        ],
+        'from_shares' => [
+            ['step' => 'キャラ紹介ページ閲覧（/c/ 全キャラ合計）', 'users' => $sharePageUsers, 'rate' => null],
+            ['step' => 'あなたも診断する（share_page_cta）', 'users' => $ctaUsers, 'rate' => ga_rate($ctaUsers, $sharePageUsers)],
+        ],
+    ];
+}
+
+/** 診断前の予想タイプ別の診断開始（ユーザー自身の入力なので集計してよい） */
+function fetch_ga_predicted_types(array $config, int $days): array
+{
+    try {
+        [$report] = ga_batch_reports($config, [[
+            'dateRanges' => ga_date_range($days),
+            'dimensions' => [['name' => 'customEvent:predicted_type']],
+            'metrics' => [['name' => 'eventCount'], ['name' => 'totalUsers']],
+            'dimensionFilter' => ga_event_filter(['diagnosis_start']),
+        ]]);
+    } catch (ApiError $e) {
+        if ($e->getCode() === 400) {
+            throw new ApiError('GA にイベント単位のカスタムディメンション predicted_type が未登録の可能性があります（' . $e->getMessage() . '）', 400);
+        }
+        throw $e;
+    }
+    $rows = [];
+    foreach (ga_rows($report) as $type => [$count, $users]) {
+        $rows[] = ['predicted_type' => $type, 'diagnosis_starts' => $count, 'users' => $users];
+    }
+    usort($rows, static fn($a, $b) => $b['diagnosis_starts'] <=> $a['diagnosis_starts']);
+    return ['days' => $days, 'rows' => $rows];
+}
+
+/** 日別のユーザー数と主要イベント数（古い順） */
+function fetch_ga_trend(array $config, int $days): array
+{
+    [$users, $events] = ga_batch_reports($config, [
+        [
+            'dateRanges' => ga_date_range($days),
+            'dimensions' => [['name' => 'date']],
+            'metrics' => [['name' => 'activeUsers']],
+        ],
+        [
+            'dateRanges' => ga_date_range($days),
+            'dimensions' => [['name' => 'date'], ['name' => 'eventName']],
+            'metrics' => [['name' => 'eventCount']],
+            'dimensionFilter' => ga_event_filter(['diagnosis_start', 'share_x', 'share_page_cta']),
+        ],
+    ]);
+    $byDate = [];
+    foreach (ga_rows($users) as $date => [$active]) {
+        $byDate[$date] = ['active_users' => $active, 'diagnosis_start' => 0, 'share_x' => 0, 'share_page_cta' => 0];
+    }
+    foreach (ga_rows($events) as $key => [$count]) {
+        [$date, $name] = explode('|', $key, 2);
+        $byDate[$date] ??= ['active_users' => 0, 'diagnosis_start' => 0, 'share_x' => 0, 'share_page_cta' => 0];
+        $byDate[$date][$name] = $count;
+    }
+    ksort($byDate);
+    $out = [];
+    foreach ($byDate as $date => $v) {
+        $date = (string) $date; // 'YYYYMMDD' は配列キーにすると整数になる
+        $out[] = ['date' => substr($date, 0, 4) . '-' . substr($date, 4, 2) . '-' . substr($date, 6, 2)] + $v;
+    }
+    return ['days' => $days, 'daily' => $out];
+}
+
+// ---------------------------------------------------------------------------
 // MCP サーバー（Streamable HTTP。SSE は使わず JSON で応答する）
 // ---------------------------------------------------------------------------
 
@@ -721,6 +1017,37 @@ function mcp_tools(): array
             'inputSchema' => ['type' => 'object', 'properties' => ['days' => $days(14)]],
             'annotations' => $readOnly,
         ],
+        [
+            'name' => 'ga_summary',
+            'title' => 'VeloAva 利用状況（GA4）',
+            'description' => 'VeloAva の直近 n 日（今日を含む）のユーザー数・新規ユーザー・セッション・PV と、'
+                . 'アプリのイベント（diagnosis_start / share_x / share_card / retry_diagnosis / share_page_cta / ui_click）の回数とユーザー数。',
+            'inputSchema' => ['type' => 'object', 'properties' => ['days' => $days(7)]],
+            'annotations' => $readOnly,
+        ],
+        [
+            'name' => 'ga_funnel',
+            'title' => 'VeloAva 診断ファネル（GA4）',
+            'description' => 'トップ閲覧 → 診断開始 → 結果ページ → Xでポスト の各段のユーザー数と転換率、'
+                . 'およびキャラ紹介ページ（/c/ 全キャラ合計）→「あなたも診断する」の流入。キャラ別の内訳は Strava 規約により返さない。',
+            'inputSchema' => ['type' => 'object', 'properties' => ['days' => $days(7)]],
+            'annotations' => $readOnly,
+        ],
+        [
+            'name' => 'ga_predicted_types',
+            'title' => 'VeloAva 予想タイプ別の診断開始（GA4）',
+            'description' => '診断前にユーザーが選んだ予想タイプ（キャラID または unknown）別の診断開始回数とユーザー数。'
+                . '予想はユーザー自身の入力で、診断結果ではない。',
+            'inputSchema' => ['type' => 'object', 'properties' => ['days' => $days(28)]],
+            'annotations' => $readOnly,
+        ],
+        [
+            'name' => 'ga_trend',
+            'title' => 'VeloAva 日別の推移（GA4）',
+            'description' => '日別のアクティブユーザー数と diagnosis_start / share_x / share_page_cta の回数。古い順。',
+            'inputSchema' => ['type' => 'object', 'properties' => ['days' => $days(14)]],
+            'annotations' => $readOnly,
+        ],
     ];
 }
 
@@ -744,6 +1071,14 @@ function mcp_call_tool(array $config, string $name, array $args): array
             );
         case 'list_wellness':
             return fetch_wellness($config, parse_days($args['days'] ?? null, 14));
+        case 'ga_summary':
+            return fetch_ga_summary($config, parse_days($args['days'] ?? null, 7));
+        case 'ga_funnel':
+            return fetch_ga_funnel($config, parse_days($args['days'] ?? null, 7));
+        case 'ga_predicted_types':
+            return fetch_ga_predicted_types($config, parse_days($args['days'] ?? null, 28));
+        case 'ga_trend':
+            return fetch_ga_trend($config, parse_days($args['days'] ?? null, 14));
     }
     throw new ApiError('unknown tool: ' . $name, 404);
 }
@@ -787,7 +1122,9 @@ function mcp_dispatch(array $config, string $method, array $params): array
                 'capabilities' => ['tools' => ['listChanged' => false]],
                 'serverInfo' => ['name' => 'icu-proxy', 'version' => '1.0.0'],
                 'instructions' => 'intervals.icu のサイクリングトレーニングデータ（読み取り専用）。'
-                    . '数値は intervals.icu が計算した値で、null は未計算・未入力を表すので推測で埋めないこと。',
+                    . '数値は intervals.icu が計算した値で、null は未計算・未入力を表すので推測で埋めないこと。'
+                    . 'ga_ で始まるツールは VeloAva（Strava 連携のキャラ診断アプリ）の GA4 利用状況。'
+                    . 'Strava の規約により、診断結果のキャラ別の集計は扱わない。',
             ]];
         case 'ping':
             return ['result' => new stdClass()];
@@ -893,6 +1230,14 @@ try {
         send_json(200, fetch_activity($config, $activityId));
     } elseif (preg_match('#^/streams/([^/]+)$#', $requestPath, $m)) {
         handle_streams($config, rawurldecode($m[1]));
+    } elseif ($requestPath === '/ga/summary') {
+        send_json(200, fetch_ga_summary($config, parse_days($days, 7)));
+    } elseif ($requestPath === '/ga/funnel') {
+        send_json(200, fetch_ga_funnel($config, parse_days($days, 7)));
+    } elseif ($requestPath === '/ga/predicted-types') {
+        send_json(200, fetch_ga_predicted_types($config, parse_days($days, 28)));
+    } elseif ($requestPath === '/ga/trend') {
+        send_json(200, fetch_ga_trend($config, parse_days($days, 14)));
     }
 } catch (ApiError $e) {
     send_error($e->getCode(), $e->getMessage());
