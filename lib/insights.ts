@@ -80,6 +80,23 @@ const RULES: ((s: Stats, sc: Scores) => Insight | null)[] = [
     if (w === 0) return { category: 'power', weight: 10, text: 'パワーメーターを付けると、診断の「出力」がもっと正確になる' }
     return null
   },
+  // ローラー中心の人（週の本数で数える。1日に複数回乗る人もいるため日数ではない）
+  (s) => {
+    const indoor = s.indoorRides ?? 0
+    if (indoor === 0 || s.totalRides === 0) return null
+    const perWeek = indoor / (s.periodDays / 7)
+    const share = Math.round((indoor / s.totalRides) * 100)
+    if (perWeek >= 7 && (s.outdoorRides ?? 0) > 0) {
+      return { category: 'indoor', weight: 92, text: `ローラー週${fmt(perWeek, 1)}本、外はたまに。部屋で鍛え上げた脚を、晴れた日に解き放つタイプ` }
+    }
+    if (perWeek >= 7) {
+      return { category: 'indoor', weight: 92, text: `ローラー週${fmt(perWeek, 1)}本。天気も信号も関係なく、部屋で黙々と積み上げる求道者` }
+    }
+    if (share >= 70) {
+      return { category: 'indoor', weight: 60, text: `ライドの${share}%がローラー。室内トレが主戦場` }
+    }
+    return null
+  },
   // パワーの使い方（実測パワーがある人だけ）
   (s) => {
     const peak = s.peakRatio ?? 0

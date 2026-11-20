@@ -21,6 +21,7 @@ export interface AnalysisResult {
     avgWatts: number            // 平均パワー (ワット、0=データなし)
     periodDays: number          // 分析期間 (日)
     outdoorRides?: number       // 速度・平均距離・登坂の計算に使った屋外ライド数（0なら屋内も含めて計算）
+    indoorRides?: number        // Zwift・ローラーなど屋内ライドの本数
     peakRatio?: number          // 最大パワー÷平均パワーの中央値（大きいほど低強度にスプリントを混ぜる走り）。実測パワーがなければ 0
     variabilityIndex?: number   // NP÷平均パワーの中央値（1に近いほど一定ペース）。実測パワーがなければ 0
   }
@@ -175,6 +176,7 @@ export function analyzeCharacter(
       ridingDaysPerWeek: Math.round(ridingDaysPerWeek * 10) / 10,
       avgWatts: Math.round(avgWatts),
       outdoorRides: outdoor.length,
+      indoorRides: rides.length - outdoor.length,
       peakRatio: Math.round(peakRatio * 10) / 10,
       variabilityIndex: Math.round(variabilityIndex * 100) / 100,
     },
