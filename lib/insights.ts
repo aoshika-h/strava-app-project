@@ -56,8 +56,9 @@ const RULES: ((s: Stats, sc: Scores) => Insight | null)[] = [
     if (d > 0 && d < 25) return { category: 'avg_distance', weight: 40, text: `1回平均${fmt(d, 1)}km。短く濃く、サクッと乗るスタイル` }
     return null
   },
-  // 平均速度
+  // 平均速度（屋外ライドがない人は Zwift の速度なので出さない）
   (s) => {
+    if (s.outdoorRides === 0) return null
     const v = s.avgSpeedKmh
     if (v >= 32) return { category: 'speed', weight: 85, text: `平均${fmt(v, 1)}km/h。集団の先頭を引ける速さ` }
     if (v >= 28) return { category: 'speed', weight: 55, text: `平均${fmt(v, 1)}km/h。巡航力はかなり高い` }
@@ -77,6 +78,15 @@ const RULES: ((s: Stats, sc: Scores) => Insight | null)[] = [
     if (w >= 220) return { category: 'power', weight: 80, text: `平均${fmt(w)}W。踏める脚を持っている` }
     if (w >= 160) return { category: 'power', weight: 40, text: `平均${fmt(w)}W。パワーで走りを管理できている` }
     if (w === 0) return { category: 'power', weight: 10, text: 'パワーメーターを付けると、診断の「出力」がもっと正確になる' }
+    return null
+  },
+  // パワーの使い方（実測パワーがある人だけ）
+  (s) => {
+    const peak = s.peakRatio ?? 0
+    const vi = s.variabilityIndex ?? 0
+    if (peak >= 6) return { category: 'power_style', weight: 75, text: `最大パワーは平均の${fmt(peak, 1)}倍。ゆったり走りつつ、ここぞで一気にもがくタイプ` }
+    if (vi > 0 && vi <= 1.05) return { category: 'power_style', weight: 70, text: `NP÷平均パワーが${fmt(vi, 2)}。パワーのブレが小さく、一定ペースで踏み続けられる` }
+    if (vi >= 1.15) return { category: 'power_style', weight: 55, text: `NP÷平均パワーが${fmt(vi, 2)}。強弱をつけたメリハリのある走り（インターバル多め）` }
     return null
   },
   // ライド回数

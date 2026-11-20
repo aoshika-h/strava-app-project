@@ -17,8 +17,9 @@ export interface StravaActivity {
   total_elevation_gain: number  // メートル（獲得標高）
   average_speed: number  // m/s（km/hに変換: ×3.6）
   max_speed: number      // m/s
-  average_watts?: number  // パワーメーターがある場合のみ
+  average_watts?: number  // パワーメーターがなくても Strava の推定値が入ることがある（device_watts で区別）
   max_watts?: number
+  device_watts?: boolean  // true のときだけ実測パワー（false は Strava の推定値）
   weighted_average_watts?: number  // NP（Normalized Power）
   average_heartrate?: number
   max_heartrate?: number

@@ -21,6 +21,8 @@ export interface AnalysisResult {
     avgWatts: number            // 平均パワー (ワット、0=データなし)
     periodDays: number          // 分析期間 (日)
     outdoorRides?: number       // 速度・平均距離・登坂の計算に使った屋外ライド数（0なら屋内も含めて計算）
+    peakRatio?: number          // 最大パワー÷平均パワーの中央値（大きいほど低強度にスプリントを混ぜる走り）。実測パワーがなければ 0
+    variabilityIndex?: number   // NP÷平均パワーの中央値（1に近いほど一定ペース）。実測パワーがなければ 0
   }
   scores: {
     climbing: number     // 登坂力 0-100
@@ -36,9 +38,22 @@ function normalize(value: number, min: number, max: number): number {
   return Math.min(100, Math.max(0, Math.round(((value - min) / (max - min)) * 100)))
 }
 
+function median(values: number[]): number {
+  if (values.length === 0) return 0
+  const sorted = [...values].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
+}
+
+// パワーの使い方の特徴（0〜100）。実測パワーのライドが少ないときは null
+export interface PowerProfile {
+  punch: number      // スプリント傾向: 最大÷平均が大きいほど高い
+  steadiness: number // 一定ペース傾向: NP÷平均が1に近いほど高い
+}
+
 // 各キャラへの適合度（0〜100）を求めて最大のキャラを選ぶ
 // 入力の数でキャラ間に差が出ないよう、どのキャラも重みの合計を1にした加重平均で比べる
-export function pickCharacter(scores: AnalysisResult['scores'], hasPower: boolean): CharacterId {
+export function pickCharacter(scores: AnalysisResult['scores'], hasPower: boolean, profile: PowerProfile | null = null): CharacterId {
   const { climbing, speed, endurance, consistency } = scores
   const power = hasPower ? scores.power : speed
   const riding = [climbing, speed, endurance, consistency]
@@ -48,8 +63,13 @@ export function pickCharacter(scores: AnalysisResult['scores'], hasPower: boolea
   const affinity: Record<CharacterId, number> = {
     climber: 0.8 * climbing + 0.2 * power,
     granfondo: 0.75 * endurance + 0.25 * climbing,
-    tt: 0.5 * speed + 0.2 * endurance + 0.3 * power,
-    sprinter: 0.7 * speed + 0.3 * (100 - endurance) - 8,
+    // パワーの使い方が分かる人は、一定ペース（TT）かスプリント混じり（スプリンター）かも判定に入れる
+    tt: profile
+      ? 0.4 * speed + 0.2 * endurance + 0.25 * power + 0.15 * profile.steadiness
+      : 0.5 * speed + 0.2 * endurance + 0.3 * power,
+    sprinter: profile
+      ? 0.4 * speed + 0.2 * (100 - endurance) + 0.4 * profile.punch - 8
+      : 0.7 * speed + 0.3 * (100 - endurance) - 8,
     // 突出した能力がなく、どれもそこそこ以上
     allrounder: mean - 0.6 * spread + 25,
     // 乗る頻度が低くてもロング派はグランフォンドを優先したいので少し弱める
@@ -105,25 +125,42 @@ export function analyzeCharacter(
   const ridingDays = new Set(rides.map((r) => r.start_date_local.slice(0, 10))).size
   const ridingDaysPerWeek = ridingDays / (periodDays / 7)
 
-  // パワーデータ（パワーメーターがある場合のみ）
-  const powerRides = rides.filter((r) => r.average_watts && r.average_watts > 50)
+  // パワーデータ（実測のみ。Strava はパワーメーターがなくても推定値を返すので device_watts で除外する）
+  const powerRides = rides.filter((r) => r.device_watts === true && (r.average_watts ?? 0) > 50)
   const avgWatts =
     powerRides.length > 0
       ? powerRides.reduce((s, r) => s + (r.average_watts || 0), 0) / powerRides.length
       : 0
 
+  // パワーの使い方（要約データから推定。秒ごとのデータは取得しない）
+  const peakRatio = median(powerRides.filter((r) => (r.max_watts ?? 0) > 0).map((r) => r.max_watts! / r.average_watts!))
+  const variabilityIndex = median(
+    powerRides.filter((r) => (r.weighted_average_watts ?? 0) > 0).map((r) => r.weighted_average_watts! / r.average_watts!),
+  )
+  // 3本以上の実測ライドがあるときだけ判定に使う
+  const profile: PowerProfile | null =
+    powerRides.length >= 3 && peakRatio > 0 && variabilityIndex > 0
+      ? {
+          punch: normalize(peakRatio, 3, 7),                       // 最大÷平均 3倍〜7倍
+          steadiness: 100 - normalize(variabilityIndex, 1.03, 1.2), // NP÷平均 1.03〜1.2
+        }
+      : null
+
   // ---- レーダーチャート用スコア（0〜100）----
   // 範囲は一般的なロード乗りの分布に合わせる（端の値ほど個性が強い）
   const hasPower = avgWatts > 0
+  const speedScore = normalize(avgSpeed, 20, 34)       // 20〜34 km/h
+  const powerScore = hasPower ? normalize(avgWatts, 120, 280) : speedScore // パワーがなければ速度で代替
   const scores = {
     climbing: normalize(climbingRatio, 3, 18),         // 3〜18 m/km
-    speed: normalize(avgSpeed, 20, 34),                // 20〜34 km/h
+    // 屋外ライドがない人の速度は Zwift の値で実力より出やすいので、パワーがあればパワーで代える
+    speed: outdoor.length === 0 && hasPower ? powerScore : speedScore,
     endurance: normalize(avgDistance, 20, 120),        // 20〜120 km
-    power: hasPower ? normalize(avgWatts, 120, 280) : normalize(avgSpeed, 20, 34), // パワーがなければ速度で代替
+    power: powerScore,
     consistency: normalize(ridingDaysPerWeek, 0.5, 6), // 週0.5〜6日
   }
 
-  const characterId = pickCharacter(scores, hasPower)
+  const characterId = pickCharacter(scores, hasPower, profile)
 
   return buildResult(
     characterId,
@@ -138,6 +175,8 @@ export function analyzeCharacter(
       ridingDaysPerWeek: Math.round(ridingDaysPerWeek * 10) / 10,
       avgWatts: Math.round(avgWatts),
       outdoorRides: outdoor.length,
+      peakRatio: Math.round(peakRatio * 10) / 10,
+      variabilityIndex: Math.round(variabilityIndex * 100) / 100,
     },
     periodDays,
     scores

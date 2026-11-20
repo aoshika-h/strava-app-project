@@ -28,7 +28,12 @@ export default function ResultView({
   const character = getCharacter(result.characterId)
   const { stats, scores } = result
   // 屋内ライドが混ざっているときは、実走だけで計算した項目だとわかるようにする
-  const outdoorTag = stats.outdoorRides && stats.outdoorRides < stats.totalRides ? '（屋外）' : ''
+  const outdoorTag =
+    stats.outdoorRides === 0 && stats.totalRides > 0
+      ? '（屋内）'
+      : stats.outdoorRides && stats.outdoorRides < stats.totalRides
+        ? '（屋外）'
+        : ''
   const [prevResult, setPrevResult] = useState<StoredResult | null>(null)
   const [predicted, setPredicted] = useState<CharacterId | null>(null)
 
