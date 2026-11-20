@@ -3,7 +3,9 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import DiagnosisStarter from './DiagnosisStarter'
+import LatestUpdate from './LatestUpdate'
 import { listCharacters } from '@/models/characters'
+import { CHANGELOG, formatChangelogDate } from '@/models/changelog'
 
 // URLパラメータのエラーメッセージマッピング
 const ERROR_MESSAGES: Record<string, string> = {
@@ -11,6 +13,19 @@ const ERROR_MESSAGES: Record<string, string> = {
   no_code: '認証コードが取得できませんでした。もう一度試してください。',
   analysis_failed: 'データの分析中にエラーが発生しました。しばらくしてから再度お試しください。',
   athlete_limit: 'アプリの利用者数が上限（999人）に達しています。現在アクセスできません。',
+}
+
+function ChangelogList({ entries }: { entries: typeof CHANGELOG }) {
+  return (
+    <ul className="space-y-2">
+      {entries.map((entry) => (
+        <li key={entry.date + entry.text} className="flex gap-3 text-white/40 leading-relaxed">
+          <span className="flex-shrink-0 w-10 text-white/30">{formatChangelogDate(entry.date)}</span>
+          <span>{entry.text}</span>
+        </li>
+      ))}
+    </ul>
+  )
 }
 
 export default function HomeView({ errorCode }: { errorCode?: string }) {
@@ -25,6 +40,9 @@ export default function HomeView({ errorCode }: { errorCode?: string }) {
         <div className="absolute top-0 right-0 w-96 h-96 bg-orange-500/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative max-w-4xl mx-auto px-6 pt-20 pb-16 text-center">
+          {/* 最新の更新（以前に診断した人にだけ、公開から14日間） */}
+          <LatestUpdate />
+
           {/* ロゴ・タイトル */}
           <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-2 text-sm text-orange-400 mb-8">
             <span>🚴</span>
@@ -144,6 +162,21 @@ export default function HomeView({ errorCode }: { errorCode?: string }) {
 
       {/* フッター */}
       <footer className="border-t border-white/5 py-6 text-center text-xs text-white/20">
+        {/* 更新履歴（ファーストビューの「NEW」からここへ飛ぶ） */}
+        <section id="changelog" className="max-w-xl mx-auto px-6 mb-6 text-left scroll-mt-6">
+          <h2 className="text-sm font-bold text-white/50 mb-3">更新履歴</h2>
+          <ChangelogList entries={CHANGELOG.slice(0, 3)} />
+          {CHANGELOG.length > 3 && (
+            <details className="mt-2 group">
+              <summary className="cursor-pointer list-none text-white/40 hover:text-white/60 underline underline-offset-2 group-open:hidden">
+                すべて見る（{CHANGELOG.length}件）
+              </summary>
+              <div className="mt-2">
+                <ChangelogList entries={CHANGELOG.slice(3)} />
+              </div>
+            </details>
+          )}
+        </section>
         <p>Stravaのデータは分析にのみ使用し、保存・共有しません</p>
         <Link href="/privacy" data-ga-event="ui_click" data-ga-id="privacy_link" className="mt-1 inline-block hover:text-white/40 transition-colors underline underline-offset-2">
           プライバシーポリシー

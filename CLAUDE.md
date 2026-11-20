@@ -128,6 +128,10 @@ Strava認証ではXやLINEのアプリ内ブラウザからStravaアプリ・Saf
 
 診断結果のキャラや性別などStrava由来のデータはイベントにもユーザープロパティにも載せない（API Policy 5.4）。予想と結果の一致/不一致も結果を含むので送らない。予想は `models/prediction.ts` でlocalStorageに保存し、結果ページの `PredictionReveal` で一度だけ答え合わせして消す。
 
+### 更新履歴 (`models/changelog.ts`)
+
+ユーザー向けの変更（判定・表示・プライバシーなど）をリリースしたら `CHANGELOG` の先頭に1件足す。先頭の1件は、以前に診断したことがある人（ブラウザに前回結果がある人）にだけ、公開から14日間トップのファーストビューに「NEW」として出る（`views/home/LatestUpdate.tsx`。長い場合は `headline` に短い一文を入れる）。初めての人には関係のない話なので出さない。フッター（`#changelog`）には最新3件を出し、残りは「すべて見る」で開く。リファクタや計測など、ユーザーから見えない変更は載せない。
+
 ### プレビューモード
 
 `/result?preview=climber&sex=female` のようにURLパラメータを指定するとモックデータで結果ページをテスト表示できる（`?data=` より優先）。キャラクターID: `climber | sprinter | tt | granfondo | allrounder | weekend`。

@@ -24,6 +24,15 @@ function loadAll(): Record<string, StoredResult> {
   }
 }
 
+// 以前に診断したことがあるか（期間を問わず保存済みの結果が1件でもあるか）
+export function hasDiagnosedBefore(): boolean {
+  try {
+    return Object.keys(loadAll()).length > 0 || localStorage.getItem(LEGACY_KEY) !== null
+  } catch {
+    return false
+  }
+}
+
 export function loadLastResult(periodDays: number): StoredResult | null {
   return loadAll()[String(periodDays)] ?? null
 }
