@@ -1,10 +1,10 @@
 // 前回診断からのキャラクター・スコアの変化
 
-import type { AnalysisResult } from '@/models/analysis'
-import { getCharacter, getVariant } from '@/models/characters'
-import type { StoredResult } from '@/models/resultHistory'
-import { buildChangeInsights } from '@/models/insights'
-import { SCORE_AXES } from '@/models/scoreAxes'
+import type { AnalysisResult } from '@/lib/analysis'
+import { getCharacter, getVariant } from '@/lib/characters'
+import type { StoredResult } from '@/lib/result-history'
+import { buildChangeInsights } from '@/lib/insights'
+import { SCORE_AXES } from '@/lib/score-axes'
 
 function formatDate(iso: string): string {
   const d = new Date(iso)

@@ -3,16 +3,16 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import type { AnalysisResult } from '@/models/analysis'
-import { getCharacter, type CharacterId } from '@/models/characters'
-import { loadLastResult, saveLastResult, type StoredResult } from '@/models/resultHistory'
+import type { AnalysisResult } from '@/lib/analysis'
+import { getCharacter, type CharacterId } from '@/lib/characters'
+import { loadLastResult, saveLastResult, type StoredResult } from '@/lib/result-history'
 import ShareCard from './ShareCard'
 import EvolutionCard from './EvolutionCard'
 import RadarChart from './RadarChart'
 import InsightsCard from './InsightsCard'
 import PredictionReveal from './PredictionReveal'
-import { takePrediction } from '@/models/prediction'
-import { SCORE_AXES } from '@/models/scoreAxes'
+import { takePrediction } from '@/lib/prediction'
+import { SCORE_AXES } from '@/lib/score-axes'
 
 export default function ResultView({
   result,

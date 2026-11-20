@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { getGaClientId, gtagEvent, gtagSetUserProperties } from '@/lib/gtag'
-import { savePrediction, type PredictedType } from '@/models/prediction'
+import { savePrediction, type PredictedType } from '@/lib/prediction'
 
 const PERIODS = [
   { label: '3ヶ月', period: '90' },

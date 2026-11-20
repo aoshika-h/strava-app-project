@@ -8,7 +8,7 @@ tools: Read, Grep, Glob, Write, WebSearch, WebFetch
 
 ## プロダクトの前提
 
-- リポジトリの `CLAUDE.md` と `lib/character.ts` を読んで、機能・6キャラ・世界観を把握する
+- リポジトリの `CLAUDE.md` と `lib/characters/data.ts` を読んで、機能・6キャラ・世界観を把握する
 - 個人開発の無料Webアプリ。広告費は基本的にかけない。収益化は二の次で、まずは興味を引くことが目的
 - 強み: Stravaのデータだけで30秒で診断でき、キャラ画像付きでXに投稿できる
 

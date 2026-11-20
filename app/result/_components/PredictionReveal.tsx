@@ -1,6 +1,6 @@
 // 診断前の予想タイプと結果の答え合わせ
 
-import { getCharacter, type CharacterId } from '@/models/characters'
+import { getCharacter, type CharacterId } from '@/lib/characters'
 
 export default function PredictionReveal({ predicted, actual }: { predicted: CharacterId; actual: CharacterId }) {
   const p = getCharacter(predicted)

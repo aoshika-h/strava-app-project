@@ -17,7 +17,7 @@ tools: Read, Grep, Glob, Write, WebSearch, WebFetch
 
 ## プロダクトの前提
 
-リポジトリの `CLAUDE.md` と `lib/character.ts` を読み、6キャラ（男女版あり）の名前・肩書き・セリフ・世界観を把握してから書く。キャラのセリフや設定を投稿に活かす。
+リポジトリの `CLAUDE.md` と `lib/characters/data.ts` を読み、6キャラ（男女版あり）の名前・肩書き・セリフ・世界観を把握してから書く。キャラのセリフや設定を投稿に活かす。
 
 ## オーナーの口調
 

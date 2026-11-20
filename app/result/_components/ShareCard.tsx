@@ -4,7 +4,7 @@
 // このコンポーネントがページ最上部に配置され、ヒーローセクションを兼ねる
 
 import { useEffect, useRef, useState } from 'react'
-import { getVariant, type Character, type CharacterId, type Sex } from '@/models/characters'
+import { getVariant, type Character, type CharacterId, type Sex } from '@/lib/characters'
 import { gtagEvent } from '@/lib/gtag'
 
 interface Props {

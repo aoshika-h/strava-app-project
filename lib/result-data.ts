@@ -1,9 +1,9 @@
 // 診断結果のURLパラメータとの相互変換と、結果ページに渡すデータの組み立て
 // サーバーレスでセッションを持たないため、結果はJSON→Base64urlでURLに載せる
 
-import type { AnalysisResult } from '@/models/analysis'
-import { isCharacterId, type CharacterId, type Sex } from '@/models/characters'
-import { buildInsights } from '@/models/insights'
+import type { AnalysisResult } from '@/lib/analysis'
+import { isCharacterId, type CharacterId, type Sex } from '@/lib/characters'
+import { buildInsights } from '@/lib/insights'
 
 export type ResultPageData =
   | { status: 'ok'; result: AnalysisResult; insights: string[]; isPreview: boolean }

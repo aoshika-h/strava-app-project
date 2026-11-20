@@ -3,7 +3,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import Script from 'next/script'
-import ClickTracker from '@/views/common/ClickTracker'
+import ClickTracker from '@/components/ClickTracker'
 import './globals.css'
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID

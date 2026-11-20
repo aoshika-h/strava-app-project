@@ -1,7 +1,7 @@
-import { getResultPageData } from '@/controllers/resultController'
-import { shareSlug } from '@/controllers/shareController'
-import ResultView from '@/views/result/ResultView'
-import ResultErrorView from '@/views/result/ResultErrorView'
+import { getResultPageData } from '@/lib/result-data'
+import { shareSlug } from '@/lib/share'
+import ResultView from './_components/ResultView'
+import ResultErrorView from './_components/ResultErrorView'
 
 export default function ResultPage({ searchParams }: { searchParams: { data?: string; preview?: string; sex?: string } }) {
   const data = getResultPageData(searchParams)

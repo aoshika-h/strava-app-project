@@ -2,8 +2,8 @@
 // 最新の更新のお知らせ。「もう一度診断」が意味を持つ、以前に診断したことがある人にだけ、公開から14日間出す
 
 import { useEffect, useState } from 'react'
-import { CHANGELOG, formatChangelogDate, isRecent } from '@/models/changelog'
-import { hasDiagnosedBefore } from '@/models/resultHistory'
+import { CHANGELOG, formatChangelogDate, isRecent } from '@/lib/changelog'
+import { hasDiagnosedBefore } from '@/lib/result-history'
 
 export default function LatestUpdate() {
   const latest = CHANGELOG[0]

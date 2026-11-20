@@ -3,8 +3,8 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import { listCharacters } from '@/models/characters'
-import type { PredictedType } from '@/models/prediction'
+import { listCharacters } from '@/lib/characters'
+import type { PredictedType } from '@/lib/prediction'
 import PeriodButtons from './PeriodButtons'
 
 export default function DiagnosisStarter() {

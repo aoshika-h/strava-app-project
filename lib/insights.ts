@@ -2,8 +2,8 @@
 // AIは使わない（Strava API Policy 5.3）。結果ページの本人にだけ表示し、シェアカードには載せない
 
 import type { AnalysisResult } from './analysis'
-import { SCORE_AXES } from './scoreAxes'
-import type { StoredResult } from './resultHistory'
+import { SCORE_AXES } from './score-axes'
+import type { StoredResult } from './result-history'
 
 type Stats = AnalysisResult['stats']
 type Scores = AnalysisResult['scores']
