@@ -136,11 +136,14 @@ Strava認証ではXやLINEのアプリ内ブラウザからStravaアプリ・Saf
 | イベント | 発生箇所 | パラメータ |
 |---|---|---|
 | `diagnosis_start` | トップの期間ボタン | `period`, `predicted_type` |
-| `share_x` | 結果ページの「Xでポスト」（GA側でキーイベント＝CVに設定） | なし |
+| `share_x` | 結果ページの「Xでポスト」（投稿画面を開いただけで、実際に投稿されたかは分からない） | なし |
+| `share_inflow` | ユーザーのXシェアから `/c/...` に着地したとき（`app/layout.tsx` の初期化スクリプトで送る。**GA側でキーイベント＝CVに設定、カウントはセッションに1回**） | なし |
 | `share_card` | 結果ページの保存・共有ボタン | `method` = share / download |
 | `retry_diagnosis` | 結果ページの「もう一度診断する」 | なし |
 | `share_page_cta` | キャラ紹介ページ（`/c/...`）の「あなたも診断する」 | なし |
 | `ui_click` | その他のリンク | `button_id` |
+
+**シェアURLのUTM**: 結果ページのXシェアは `/c/{characterId}_{sex}?utm_source=x&utm_medium=social&utm_campaign=user_share` を投稿する。`utm_campaign=user_share` で着地した人だけを `share_inflow`（CV）として数え、実際に投稿されて誰かが見たことの裏付けにする。開発者が自分で宣伝するポストには `utm_campaign=owner_post` を付け、ユーザーのシェアと混ぜない。ファネルは 結果ページ → `share_x` → `share_inflow` → `share_page_cta`。
 
 ユーザープロパティ `predicted_type`（ユーザー単位のカスタムディメンション）には、診断前にユーザーが選んだ予想タイプ（6キャラのID または `unknown`）を送る。ユーザー自身の入力なのでStrava由来ではない。
 

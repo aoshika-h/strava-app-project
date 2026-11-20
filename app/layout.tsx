@@ -51,6 +51,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 } else {
                   gtag('config', '${GA_ID}');
                 }
+                // ユーザーのXシェアから来た人の着地（CV）。シェアURLの utm_campaign=user_share で見分ける
+                if (location.pathname.indexOf('/c/') === 0 && params.get('utm_campaign') === 'user_share') {
+                  gtag('event', 'share_inflow');
+                }
               })();
             `}</Script>
           </>
