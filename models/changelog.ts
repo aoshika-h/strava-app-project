@@ -24,6 +24,13 @@ export const CHANGELOG: ChangelogEntry[] = [
   { date: '2026-11-12', text: 'Stravaの本番利用が承認され、どなたでも診断できるようになりました' },
 ]
 
+// ファーストビューに出すのは、公開から何日以内の更新か
+export const LATEST_UPDATE_DAYS = 14
+
+export function isRecent(entry: ChangelogEntry, now = new Date()): boolean {
+  return now.getTime() - new Date(`${entry.date}T00:00:00+09:00`).getTime() < LATEST_UPDATE_DAYS * 86_400_000
+}
+
 export function formatChangelogDate(date: string): string {
   const [, m, d] = date.split('-')
   return `${Number(m)}/${Number(d)}`
