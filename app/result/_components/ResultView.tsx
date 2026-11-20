@@ -79,11 +79,16 @@ export default function ResultView({
           <h2 className="text-sm font-bold text-white/40 tracking-widest uppercase mb-3">Battle Records</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {[
-              { label: '合計距離', value: `${stats.totalDistanceKm.toLocaleString()} km`, icon: '🛣️' },
-              { label: `平均距離${outdoorTag}`, value: `${stats.avgDistanceKm} km`, icon: '📏' },
-              { label: `平均速度${outdoorTag}`, value: `${stats.avgSpeedKmh} km/h`, icon: '⚡' },
-              { label: '総獲得標高', value: `${stats.totalElevationM.toLocaleString()} m`, icon: '🏔️' },
-              { label: `山岳比率${outdoorTag}`, value: `${stats.climbingRatioMPerKm} m/km`, icon: '📈' },
+              // 距離が記録されないローラー練習（ERG など）だけの人は、距離・速度・標高のカードを出さない
+              ...(stats.totalDistanceKm > 0
+                ? [
+                    { label: '合計距離', value: `${stats.totalDistanceKm.toLocaleString()} km`, icon: '🛣️' },
+                    { label: `平均距離${outdoorTag}`, value: `${stats.avgDistanceKm} km`, icon: '📏' },
+                    { label: `平均速度${outdoorTag}`, value: `${stats.avgSpeedKmh} km/h`, icon: '⚡' },
+                    { label: '総獲得標高', value: `${stats.totalElevationM.toLocaleString()} m`, icon: '🏔️' },
+                    { label: `山岳比率${outdoorTag}`, value: `${stats.climbingRatioMPerKm} m/km`, icon: '📈' },
+                  ]
+                : []),
               { label: '乗った日数', value: `週${stats.ridingDaysPerWeek}日`, icon: '📅' },
               ...(stats.avgWatts > 0 ? [{ label: '平均パワー', value: `${stats.avgWatts} W`, icon: '💪' }] : []),
             ].map((item) => (

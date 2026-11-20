@@ -89,10 +89,12 @@ export function analyzeCharacter(
   periodDays = 90
 ): AnalysisResult {
   // ライドのみにフィルタリング（ランやウォークは除外）
+  const isIndoor = (a: StravaActivity) => a.type === 'VirtualRide' || a.sport_type === 'VirtualRide' || a.trainer === true
   const rides = activities.filter(
     (a) =>
-      (a.type === 'Ride' || a.type === 'VirtualRide' || a.sport_type === 'Ride') &&
-      a.distance > 500  // 500m未満は誤登録とみなして除外
+      (a.type === 'Ride' || a.type === 'VirtualRide' || a.sport_type === 'Ride' || a.sport_type === 'VirtualRide') &&
+      // 500m未満は誤登録とみなして除外。ただし ERG のローラー練習は距離 0 で記録されるアプリがあるので、10分以上動いていれば数える
+      (a.distance > 500 || (isIndoor(a) && a.moving_time >= 600))
   )
 
   // ライドがゼロの場合はサンデーライダーとして扱う
@@ -108,19 +110,23 @@ export function analyzeCharacter(
 
   // 走りの特徴（速度・1回の距離・登坂）は実走を基準にする。Zwiftなどの屋内ライドは速度が出やすく
   // 短い練習が多いため、混ぜるとスプリンター寄りに歪む。屋外が1件もない人だけ屋内も含める
-  const outdoor = rides.filter((r) => r.type !== 'VirtualRide' && r.sport_type !== 'VirtualRide' && !r.trainer)
+  const outdoor = rides.filter((r) => !isIndoor(r))
   const basis = outdoor.length > 0 ? outdoor : rides
-  const basisDistKm = basis.reduce((s, r) => s + r.distance, 0) / 1000
-  const basisElev = basis.reduce((s, r) => s + r.total_elevation_gain, 0)
+  // 距離・速度・登坂は距離が記録されたライドだけで計算する（距離 0 のローラー練習で平均が下がらないように）
+  const withDistance = basis.filter((r) => r.distance > 500)
+  const basisDistKm = withDistance.reduce((s, r) => s + r.distance, 0) / 1000
+  const basisElev = withDistance.reduce((s, r) => s + r.total_elevation_gain, 0)
 
   // 獲得標高比率: 山岳系かどうかの指標 (m/km)
   const climbingRatio = basisDistKm > 0 ? basisElev / basisDistKm : 0
 
   // 平均速度 (km/h)
-  const avgSpeed = basis.reduce((s, r) => s + r.average_speed * 3.6, 0) / basis.length
+  const avgSpeed = withDistance.length > 0 ? withDistance.reduce((s, r) => s + r.average_speed * 3.6, 0) / withDistance.length : 0
 
   // 平均距離 (km)
-  const avgDistance = basisDistKm / basis.length
+  const avgDistance = withDistance.length > 0 ? basisDistKm / withDistance.length : 0
+  // 1回あたりの時間（屋外ライドがない人の持久力は距離ではなく時間で測る）
+  const avgHours = basis.reduce((s, r) => s + (r.moving_time ?? 0), 0) / basis.length / 3600
 
   // 週あたりの乗った日数（屋内ライドやアクティビティ分割で件数が膨らむため、日付単位で数える）
   const ridingDays = new Set(rides.map((r) => r.start_date_local.slice(0, 10))).size
@@ -156,7 +162,8 @@ export function analyzeCharacter(
     climbing: normalize(climbingRatio, 3, 18),         // 3〜18 m/km
     // 屋外ライドがない人の速度は Zwift の値で実力より出やすいので、パワーがあればパワーで代える
     speed: outdoor.length === 0 && hasPower ? powerScore : speedScore,
-    endurance: normalize(avgDistance, 20, 120),        // 20〜120 km
+    // 屋外は 1回の距離 20〜120 km、屋外ライドがない人は 1回の時間 45分〜4時間（ローラーは距離が出ないことがあるため）
+    endurance: outdoor.length > 0 ? normalize(avgDistance, 20, 120) : normalize(avgHours, 0.75, 4),
     power: powerScore,
     consistency: normalize(ridingDaysPerWeek, 0.5, 6), // 週0.5〜6日
   }
