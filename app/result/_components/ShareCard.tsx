@@ -25,7 +25,9 @@ export default function ShareCard({ character, characterId, sex, sharePath }: Pr
   const [origin, setOrigin] = useState('')
   useEffect(() => setOrigin(window.location.origin), [])
   const shareText = `VeloAvaでサイクリストタイプを診断したら「${genderText.name}」（${genderText.title}）だった！\nあなたは何タイプ？\n#VeloAva #ロードバイク`
-  const xIntentUrl = `https://x.com/intent/post?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(origin + sharePath)}`
+  // ユーザーのシェアから来た人を自分の宣伝ポストと分けて数えるため、シェアURLにUTMを付ける（着地時に layout.tsx が share_inflow を送る）
+  const shareUrl = `${origin}${sharePath}?utm_source=x&utm_medium=social&utm_campaign=user_share`
+  const xIntentUrl = `https://x.com/intent/post?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`
 
   const handleSave = async () => {
     if (!cardRef.current) return
