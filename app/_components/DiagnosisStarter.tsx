@@ -9,6 +9,7 @@ import PeriodButtons from './PeriodButtons'
 
 export default function DiagnosisStarter() {
   const [predicted, setPredicted] = useState<PredictedType | null>(null)
+  const [includePrivate, setIncludePrivate] = useState(false)
   const characters = listCharacters()
   const picked = predicted && predicted !== 'unknown' ? characters.find((c) => c.id === predicted) : null
 
@@ -59,7 +60,20 @@ export default function DiagnosisStarter() {
               あなたの予想：<span className="font-bold" style={{ color: picked.accentColor }}>{picked.typeName}</span>
             </p>
           )}
-          <PeriodButtons predicted={predicted} />
+          {/* ローラーを「自分のみ」にしている人向け。チェックしたときだけ広い権限（activity:read_all）を求める */}
+          <label className="flex items-start gap-2 max-w-sm text-left text-xs text-white/60 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={includePrivate}
+              onChange={(e) => setIncludePrivate(e.target.checked)}
+              className="mt-0.5 h-4 w-4 flex-shrink-0 accent-[#FC4C02]"
+            />
+            <span>
+              「自分のみ」に設定したライドも含める
+              <span className="block text-white/40">ローラーの記録を非公開にしている方向け。Stravaの許可画面で、非公開のアクティビティの読み取りも求めます</span>
+            </span>
+          </label>
+          <PeriodButtons predicted={predicted} includePrivate={includePrivate} />
         </div>
       )}
     </div>

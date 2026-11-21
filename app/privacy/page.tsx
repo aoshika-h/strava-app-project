@@ -57,7 +57,7 @@ export default function PrivacyPage() {
         </Section>
 
         <Section title="5. Strava APIについて">
-          <p>本アプリはStravaの公式APIを使用しています。公開・フォロワー限定のアクティビティの読み取り権限のみを使用し（「自分のみ」に設定した非公開アクティビティは読みません）、データの書き込み・変更・削除は一切行いません。Stravaのプライバシーポリシーについては <span className="text-orange-400">strava.com/legal/privacy</span> をご確認ください。</p>
+          <p>本アプリはStravaの公式APIを使用しています。公開・フォロワー限定のアクティビティの読み取り権限のみを使用し（「自分のみ」に設定した非公開アクティビティは、診断画面で「自分のみに設定したライドも含める」を選んだ場合だけ読み取ります）、データの書き込み・変更・削除は一切行いません。Stravaのプライバシーポリシーについては <span className="text-orange-400">strava.com/legal/privacy</span> をご確認ください。</p>
         </Section>
 
         <Section title="6. お問い合わせ">
@@ -86,7 +86,7 @@ export default function PrivacyPage() {
             </div>
             <div>
               <h3 className="text-white/70 font-bold mb-1">Strava API Usage</h3>
-              <p>This application uses read-only Strava API access (<code className="text-white/40">read, activity:read</code>). Activities you set to “Only You” are not read. We do not write, modify, or delete any data on Strava.</p>
+              <p>This application uses read-only Strava API access (<code className="text-white/40">read, activity:read</code>). Activities you set to “Only You” are read only if you choose to include them before the diagnosis (<code className="text-white/40">activity:read_all</code>). We do not write, modify, or delete any data on Strava.</p>
             </div>
             <div>
               <h3 className="text-white/70 font-bold mb-1">Contact</h3>

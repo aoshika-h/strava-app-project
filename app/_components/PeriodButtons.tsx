@@ -10,7 +10,7 @@ const PERIODS = [
   { label: '1年',   period: '365' },
 ]
 
-export default function PeriodButtons({ predicted }: { predicted: PredictedType }) {
+export default function PeriodButtons({ predicted, includePrivate }: { predicted: PredictedType; includePrivate: boolean }) {
   const [loading, setLoading] = useState<string | null>(null)
 
   useEffect(() => {
@@ -21,11 +21,11 @@ export default function PeriodButtons({ predicted }: { predicted: PredictedType 
   const handleClick = async (period: string, label: string) => {
     if (loading) return
     gtagSetUserProperties({ predicted_type: predicted })
-    gtagEvent('diagnosis_start', { period: label, predicted_type: predicted })
+    gtagEvent('diagnosis_start', { period: label, predicted_type: predicted, include_private: includePrivate ? 'yes' : 'no' })
     savePrediction(predicted)
     setLoading(period)
     const cid = await getGaClientId()
-    window.location.href = `/api/auth/strava?period=${period}${cid ? `&cid=${encodeURIComponent(cid)}` : ''}`
+    window.location.href = `/api/auth/strava?period=${period}${includePrivate ? '&private=1' : ''}${cid ? `&cid=${encodeURIComponent(cid)}` : ''}`
   }
 
   return (

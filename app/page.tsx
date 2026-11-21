@@ -77,7 +77,7 @@ export default function HomePage({ searchParams }: { searchParams: { error?: str
             {[
               { icon: '🔒', text: 'ライドデータはサーバーに保存しません' },
               { icon: '🔌', text: '診断が終わると Strava との連携を自動で解除します（Stravaの「設定 → 連携アプリ」から消えていることを確認できます）' },
-              { icon: '👀', text: '読み取りのみ。投稿・変更は一切しません。「自分のみ」にしている非公開アクティビティも読みません' },
+              { icon: '👀', text: '読み取りのみ。投稿・変更は一切しません。「自分のみ」にしている非公開アクティビティは、チェックを入れたときだけ読みます' },
             ].map((item) => (
               <li key={item.icon} className="flex gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
                 <span aria-hidden>{item.icon}</span>

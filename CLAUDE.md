@@ -137,7 +137,7 @@ Strava認証ではXやLINEのアプリ内ブラウザからStravaアプリ・Saf
 
 | イベント | 発生箇所 | パラメータ |
 |---|---|---|
-| `diagnosis_start` | トップの期間ボタン | `period`, `predicted_type` |
+| `diagnosis_start` | トップの期間ボタン | `period`, `predicted_type`, `include_private` |
 | `share_x` | 結果ページの「Xでポスト」（投稿画面を開いただけで、実際に投稿されたかは分からない） | なし |
 | `share_inflow` | ユーザーのXシェアから `/c/...` に着地したとき（`app/layout.tsx` の初期化スクリプトで送る。**GA側でキーイベント＝CVに設定、カウントはセッションに1回**） | なし |
 | `share_card` | 結果ページの保存・共有ボタン | `method` = share / download |
@@ -163,7 +163,7 @@ Strava認証ではXやLINEのアプリ内ブラウザからStravaアプリ・Saf
 
 - 本番アクセス承認済み（2026年11月）。接続アスリート数は**999人上限**。超過時は `exchangeCode()` が `err.code === 'athlete_limit'` エラーを投げ、トップページに `?error=athlete_limit` でリダイレクトされる。
 - レート制限: 全体 600リクエスト/15分・6,000/日、読み取り 300/15分・3,000/日。1診断あたりのAPI呼び出しはアクティビティ取得が200件ごとに1回（`lib/strava.ts` の `MAX_PAGES` で最大5回）。
-- スコープ: `read,activity:read`（公開・フォロワー限定のアクティビティのみ。「自分のみ」の非公開アクティビティとプライバシーゾーンは読まない。連携をためらわせないため `read_all` は使わない）
+- スコープ: 既定は `read,activity:read`（公開・フォロワー限定のアクティビティのみ。連携をためらわせないため）。トップの「『自分のみ』に設定したライドも含める」にチェックした人だけ `read,activity:read_all`（`/api/auth/strava?private=1`）。ローラーの記録を「自分のみ」にしている人が多く、そのままだと毎日乗っていてもサンデーライダーになるため。GA の `diagnosis_start` に `include_private`（yes/no）を付けている
 - 診断は1回きりの用途なので、アクティビティ取得後に成否に関わらず `revokeToken()`（`POST /oauth/revoke`）で連携を解除し、接続アスリート枠を空ける。旧 `/oauth/deauthorize` は2027-06-01で廃止されるため使わない
 - アクティビティ・アスリートのIDは `id`（2027-06-01以降64bit整数でJSでは精度が落ちる）ではなく文字列の `id_str` を使う
 - アクティビティ取得: 最大200件/リクエスト。期間内の全件をページングで取得する（1年で200件を超える人が普通にいるため）
