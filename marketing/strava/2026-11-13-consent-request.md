@@ -26,11 +26,11 @@ On the result page, the user can share an image of their character by their own 
 Is this kind of user-initiated sharing allowed?
 
 3. Saving the last result in the user's browser (Section 6.2)
-To show "how your type changed since last time", VeloAva saves only the character type, five scores (0-100) and the date in the user's own browser (localStorage). This is not sent to our server, and we do not store any Strava Data on our server.
+To show "how your type changed since last time", VeloAva saves only the character type, five scores (0-100), the analysis period (3 months, 6 months or 1 year) and the date in the user's own browser (localStorage). This is not sent to our server, and we do not store any Strava Data on our server.
 Is this allowed beyond seven days, or should we delete it after seven days?
 
 4. Usage counting (Section 5.4)
-We use Google Analytics to count button clicks. The share event currently includes the character type. Can we keep this, or should we remove the character type and count only the clicks?
+We use Google Analytics to count button clicks. To be safe, we removed the character type from the share event and now count only the clicks. Would it be allowed to include the character type in this event?
 
 If any of these points is not allowed, I will change the app accordingly.
 
@@ -60,10 +60,10 @@ X と自分の Strava アカウントで VeloAva を紹介したいです。投�
 結果ページでは、ユーザーが自分でボタンを押してキャラ画像をシェアできます。画像とリンクに含まれるのはキャラのタイプとイラストだけで、名前・プロフィール写真・アクティビティデータ・スコアは含みません。このような本人によるシェアは許可されますか。
 
 3. 前回の結果をブラウザに保存すること（6.2条）
-「前回からのタイプの変化」を表示するため、キャラのタイプ・5つのスコア（0〜100）・日付だけをユーザー本人のブラウザ（localStorage）に保存しています。サーバーには送らず、Strava のデータをサーバーに保存することもありません。7日を超えて保存してよいか、7日で消すべきか教えてください。
+「前回からのタイプの変化」を表示するため、キャラのタイプ・5つのスコア（0〜100）・分析期間（3ヶ月／6ヶ月／1年）・日付だけをユーザー本人のブラウザ（localStorage）に保存しています。サーバーには送らず、Strava のデータをサーバーに保存することもありません。7日を超えて保存してよいか、7日で消すべきか教えてください。
 
 4. 利用数の計測（5.4条）
-Google Analytics でボタンのクリック数を数えています。シェアのイベントに現在キャラのタイプを含めていますが、このままでよいか、タイプを外してクリック数だけにすべきか教えてください。
+Google Analytics でボタンのクリック数を数えています。念のため、シェアのイベントからキャラのタイプを外し、今はクリック数だけを数えています。このイベントにキャラのタイプを含めることは許可されますか。
 
 許可されない点があれば、アプリ側で対応します。
 
