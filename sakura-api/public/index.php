@@ -36,7 +36,7 @@ const MCP_PROTOCOL_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-1
 define('GA_DATA_API_BASE', getenv('GA_DATA_API_BASE') ?: 'https://analyticsdata.googleapis.com/v1beta');
 const GA_SCOPE = 'https://www.googleapis.com/auth/analytics.readonly';
 // VeloAva が送っている GA4 イベント（CLAUDE.md の「GA4 計測」と揃える）
-const GA_APP_EVENTS = ['diagnosis_start', 'share_x', 'share_card', 'retry_diagnosis', 'share_page_cta', 'ui_click'];
+const GA_APP_EVENTS = ['diagnosis_start', 'share_x', 'share_inflow', 'share_card', 'retry_diagnosis', 'share_page_cta', 'ui_click'];
 
 /** クライアントに返すエラー（HTTP ステータスを code に持つ） */
 final class ApiError extends RuntimeException
@@ -843,7 +843,7 @@ function fetch_ga_funnel(array $config, int $days): array
             'dateRanges' => ga_date_range($days),
             'dimensions' => [['name' => 'eventName']],
             'metrics' => [['name' => 'totalUsers']],
-            'dimensionFilter' => ga_event_filter(['diagnosis_start', 'share_x', 'share_page_cta']),
+            'dimensionFilter' => ga_event_filter(['diagnosis_start', 'share_x', 'share_inflow', 'share_page_cta']),
         ],
     ]);
     $users = static fn(array $report): int => (ga_rows($report)[''][0] ?? 0);
@@ -853,21 +853,26 @@ function fetch_ga_funnel(array $config, int $days): array
     $resultUsers = $users($result);
     $shareXUsers = $e['share_x'][0] ?? 0;
     $sharePageUsers = $users($share);
+    $inflowUsers = $e['share_inflow'][0] ?? 0;
     $ctaUsers = $e['share_page_cta'][0] ?? 0;
 
     return [
         'days' => $days,
-        'note' => 'users はステップごとのユーザー数（GA の totalUsers）。rate は前のステップに対する %',
+        'note' => 'users はステップごとのユーザー数（GA の totalUsers）。rate は前のステップに対する %。'
+            . 'CV は share_inflow（ユーザーのXシェアから実際に人が来た）。share_x は投稿画面を開いただけで、投稿されたかは分からない',
         'diagnosis' => [
             ['step' => 'トップ閲覧', 'users' => $topUsers, 'rate' => null],
             ['step' => '診断開始（diagnosis_start）', 'users' => $startUsers, 'rate' => ga_rate($startUsers, $topUsers)],
             ['step' => '結果ページ表示', 'users' => $resultUsers, 'rate' => ga_rate($resultUsers, $startUsers)],
-            ['step' => 'Xでポスト（share_x）', 'users' => $shareXUsers, 'rate' => ga_rate($shareXUsers, $resultUsers)],
+            ['step' => 'Xでポスト（share_x・投稿画面を開いた）', 'users' => $shareXUsers, 'rate' => ga_rate($shareXUsers, $resultUsers)],
         ],
         'from_shares' => [
-            ['step' => 'キャラ紹介ページ閲覧（/c/ 全キャラ合計）', 'users' => $sharePageUsers, 'rate' => null],
+            ['step' => 'キャラ紹介ページ閲覧（/c/ 全キャラ合計。オーナーの宣伝ポスト経由も含む）', 'users' => $sharePageUsers, 'rate' => null],
+            ['step' => 'うちユーザーのシェア経由の着地（share_inflow・CV）', 'users' => $inflowUsers, 'rate' => ga_rate($inflowUsers, $sharePageUsers)],
             ['step' => 'あなたも診断する（share_page_cta）', 'users' => $ctaUsers, 'rate' => ga_rate($ctaUsers, $sharePageUsers)],
         ],
+        // 1人がXでポストを開くと何人が来たか（拡散の強さ）。シェアした本人が自分の投稿を開いた分も含む
+        'inflow_per_sharer' => $shareXUsers > 0 ? round($inflowUsers / $shareXUsers, 2) : null,
     ];
 }
 
@@ -908,16 +913,16 @@ function fetch_ga_trend(array $config, int $days): array
             'dateRanges' => ga_date_range($days),
             'dimensions' => [['name' => 'date'], ['name' => 'eventName']],
             'metrics' => [['name' => 'eventCount']],
-            'dimensionFilter' => ga_event_filter(['diagnosis_start', 'share_x', 'share_page_cta']),
+            'dimensionFilter' => ga_event_filter(['diagnosis_start', 'share_x', 'share_inflow', 'share_page_cta']),
         ],
     ]);
     $byDate = [];
     foreach (ga_rows($users) as $date => [$active]) {
-        $byDate[$date] = ['active_users' => $active, 'diagnosis_start' => 0, 'share_x' => 0, 'share_page_cta' => 0];
+        $byDate[$date] = ['active_users' => $active, 'diagnosis_start' => 0, 'share_x' => 0, 'share_inflow' => 0, 'share_page_cta' => 0];
     }
     foreach (ga_rows($events) as $key => [$count]) {
         [$date, $name] = explode('|', $key, 2);
-        $byDate[$date] ??= ['active_users' => 0, 'diagnosis_start' => 0, 'share_x' => 0, 'share_page_cta' => 0];
+        $byDate[$date] ??= ['active_users' => 0, 'diagnosis_start' => 0, 'share_x' => 0, 'share_inflow' => 0, 'share_page_cta' => 0];
         $byDate[$date][$name] = $count;
     }
     ksort($byDate);
@@ -1028,7 +1033,8 @@ function mcp_tools(): array
             'name' => 'ga_summary',
             'title' => 'VeloAva 利用状況（GA4）',
             'description' => 'VeloAva の直近 n 日（今日を含む）のユーザー数・新規ユーザー・セッション・PV と、'
-                . 'アプリのイベント（diagnosis_start / share_x / share_card / retry_diagnosis / share_page_cta / ui_click）の回数とユーザー数。',
+                . 'アプリのイベント（diagnosis_start / share_x / share_inflow / share_card / retry_diagnosis / share_page_cta / ui_click）の回数とユーザー数。'
+                . 'CV は share_inflow（ユーザーのXシェアから人が来た）。share_x は投稿画面を開いただけ。',
             'inputSchema' => ['type' => 'object', 'properties' => ['days' => $days(7)]],
             'annotations' => $readOnly,
         ],
@@ -1036,7 +1042,8 @@ function mcp_tools(): array
             'name' => 'ga_funnel',
             'title' => 'VeloAva 診断ファネル（GA4）',
             'description' => 'トップ閲覧 → 診断開始 → 結果ページ → Xでポスト の各段のユーザー数と転換率、'
-                . 'およびキャラ紹介ページ（/c/ 全キャラ合計）→「あなたも診断する」の流入。キャラ別の内訳は Strava 規約により返さない。',
+                . 'およびキャラ紹介ページ（/c/ 全キャラ合計）→ ユーザーのシェア経由の着地（share_inflow・CV）→「あなたも診断する」、'
+                . 'Xでポスト1人あたりの流入数（inflow_per_sharer）。キャラ別の内訳は Strava 規約により返さない。',
             'inputSchema' => ['type' => 'object', 'properties' => ['days' => $days(7)]],
             'annotations' => $readOnly,
         ],
@@ -1051,7 +1058,7 @@ function mcp_tools(): array
         [
             'name' => 'ga_trend',
             'title' => 'VeloAva 日別の推移（GA4）',
-            'description' => '日別のアクティブユーザー数と diagnosis_start / share_x / share_page_cta の回数。古い順。',
+            'description' => '日別のアクティブユーザー数と diagnosis_start / share_x / share_inflow / share_page_cta の回数。古い順。',
             'inputSchema' => ['type' => 'object', 'properties' => ['days' => $days(14)]],
             'annotations' => $readOnly,
         ],

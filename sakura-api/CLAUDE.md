@@ -69,10 +69,10 @@ claude.ai のカスタムコネクタ（`sakura_icu_api`）として登録済み
 
 | MCP ツール | REST | 内容 |
 |---|---|---|
-| `ga_summary(days=7)` | `GET /ga/summary` | ユーザー数・新規・セッション・PV、VeloAva のイベント別の回数とユーザー数 |
-| `ga_funnel(days=7)` | `GET /ga/funnel` | トップ → 診断開始 → 結果 → Xポスト、キャラ紹介ページ（合計）→ 診断CTA のユーザー数と転換率。結果ページは `?preview=` を除く |
+| `ga_summary(days=7)` | `GET /ga/summary` | ユーザー数・新規・セッション・PV、VeloAva のイベント別の回数とユーザー数（CV は `share_inflow`） |
+| `ga_funnel(days=7)` | `GET /ga/funnel` | トップ → 診断開始 → 結果 → Xポスト、キャラ紹介ページ（合計）→ シェア経由の着地（`share_inflow`・CV）→ 診断CTA のユーザー数と転換率、Xポスト1人あたりの流入数。結果ページは `?preview=` を除く |
 | `ga_predicted_types(days=28)` | `GET /ga/predicted-types` | 予想タイプ別の診断開始。GA にイベント単位のカスタムディメンション `predicted_type` の登録が必要 |
-| `ga_trend(days=14)` | `GET /ga/trend` | 日別のアクティブユーザーと diagnosis_start / share_x / share_page_cta |
+| `ga_trend(days=14)` | `GET /ga/trend` | 日別のアクティブユーザーと diagnosis_start / share_x / share_inflow / share_page_cta |
 
 `days` は今日を含む n 日（GA プロパティのタイムゾーン基準）。テストは `GA_DATA_API_BASE` と鍵 JSON の `token_uri` をモックに向けて `php -S` で行う。
 

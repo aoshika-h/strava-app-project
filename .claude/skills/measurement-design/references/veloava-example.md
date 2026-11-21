@@ -5,14 +5,15 @@ Next.js（Vercel）+ GA4。Stravaのライドデータからタイプを6キャ�
 ## 計測の目的
 
 - 「X投稿から来た人が診断に進んでいるか」「どこで離脱しているか」を判断する
-- CV = Xでポスト（`share_x`）
+- CV = ユーザーのシェアから人が来た（`share_inflow`）。当初は Xでポストのクリック（`share_x`）をCVにしていたが、投稿画面を開いただけで実際に投稿されたかは分からないため、シェアURLに `utm_campaign=user_share` を付けて着地を数える形に変えた
 
 ## イベント設計
 
 | イベント | 発生箇所 | パラメータ |
 |---|---|---|
 | `diagnosis_start` | トップの期間ボタン | `period`, `predicted_type` |
-| `share_x` | 結果ページの「Xでポスト」（キーイベント） | なし |
+| `share_x` | 結果ページの「Xでポスト」（投稿画面を開いた） | なし |
+| `share_inflow` | ユーザーのシェアURLからキャラ紹介ページに着地（キーイベント） | なし |
 | `share_card` | 保存・共有ボタン | `method` = share / download |
 | `retry_diagnosis` | もう一度診断する | なし |
 | `share_page_cta` | キャラ紹介ページの「あなたも診断する」 | なし |
