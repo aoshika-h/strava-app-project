@@ -1,12 +1,16 @@
-// プライバシーポリシーページ
+// プライバシーポリシーページ（URL は /privacy）
+// 中身が固定なので、ビルド時に一度だけHTMLを作る静的ページになる（アクセスのたびにサーバーで作らない）。
+// Strava の本番申請やユーザーへの説明に使う。計測やデータの扱いを変えたら、ここも必ず合わせて直す
 
 import Link from 'next/link'
 import type { Metadata } from 'next'
 
+// このページだけの <title>。layout.tsx の metadata を上書きする
 export const metadata: Metadata = {
   title: 'プライバシーポリシー — VeloAva',
 }
 
+// children は「タグの中に書いた中身」を受け取る特別な props（<Section title="...">ここ</Section>）
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mb-10">

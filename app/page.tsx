@@ -1,4 +1,7 @@
 // トップページ: アプリの説明・期間選択（Strava連携）・キャラ一覧
+// URL は /。Next.js の決まりで app/page.tsx がトップページになる（app/result/page.tsx なら /result）。
+// サーバーコンポーネントなので、ここではブラウザの機能（localStorage、クリック処理など）を使わない。
+// 操作が必要な部分は 'use client' を付けた部品（_components/ 内）に切り出して埋め込んでいる
 
 import Link from 'next/link'
 import Image from 'next/image'
@@ -8,6 +11,7 @@ import { listCharacters } from '@/lib/characters'
 import { CHANGELOG, formatChangelogDate } from '@/lib/changelog'
 
 // URLパラメータのエラーメッセージマッピング
+// Strava 認証に失敗すると /api/auth/callback が /?error=access_denied のようにここへ戻す
 const ERROR_MESSAGES: Record<string, string> = {
   access_denied: 'Stravaの連携を拒否されました。もう一度試してください。',
   no_code: '認証コードが取得できませんでした。もう一度試してください。',
@@ -15,6 +19,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   athlete_limit: 'アプリの利用者数が上限（999人）に達しています。現在アクセスできません。',
 }
 
+// ページ内だけで使う小さな部品は、別ファイルにせず同じファイルに関数として書いてよい
+// typeof CHANGELOG は「CHANGELOG と同じ型」という意味（型を二重に書かずに済む）
 function ChangelogList({ entries }: { entries: typeof CHANGELOG }) {
   return (
     <ul className="space-y-2">
@@ -28,6 +34,7 @@ function ChangelogList({ entries }: { entries: typeof CHANGELOG }) {
   )
 }
 
+// ページの部品（page.tsx の default export）は、URL のクエリ（?error=...）を searchParams として受け取れる
 export default function HomePage({ searchParams }: { searchParams: { error?: string } }) {
   const errorMsg = searchParams.error ? ERROR_MESSAGES[searchParams.error] : null
 

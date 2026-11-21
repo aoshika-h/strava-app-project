@@ -1,4 +1,7 @@
 // キャラ別シェアページ: Xのカードから来た人を診断に誘導する着地点
+// URL は /c/climber_male のような形。フォルダ名の [slug] は「動的セグメント」で、URL のその部分が params.slug に入る。
+// 同じフォルダの opengraph-image.tsx が、このページの OGP 画像（Xのカードの画像）を自動で担当する。
+// 出てくる概念: 動的ルート、params、generateMetadata、notFound()
 
 import Link from 'next/link'
 import Image from 'next/image'
@@ -10,6 +13,8 @@ interface PageProps {
   params: { slug: string }
 }
 
+// generateMetadata はページごとに中身が変わる <title> や OGP を作るための関数（固定なら export const metadata でよい）。
+// Xのボットはこの <meta> を読んでカードを作るので、キャラ名入りのタイトルにしている
 export function generateMetadata({ params }: PageProps): Metadata {
   const data = getSharePageData(params.slug)
   if (!data) return {}
@@ -25,6 +30,7 @@ export function generateMetadata({ params }: PageProps): Metadata {
 
 export default function SharePage({ params }: PageProps) {
   const data = getSharePageData(params.slug)
+  // notFound() を呼ぶとそこで処理が止まり、404 ページが表示される（/c/nope_male のような存在しないキャラ）
   if (!data) notFound()
   const { characterId, sex, character, variant } = data
 

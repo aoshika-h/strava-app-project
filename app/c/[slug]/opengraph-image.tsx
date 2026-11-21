@@ -1,4 +1,8 @@
 // キャラ別OGP画像（Xのカードに出る 1200x630）。next/og(satori)で描画するため inline style のみ
+// Next.js の決まりで、この名前のファイルを置くと同じフォルダのページの OGP 画像になり、
+// <meta property="og:image"> も自動で付く（URL は /c/climber_male/opengraph-image）。
+// JSX を HTML ではなく PNG 画像に変換している。satori は CSS の一部しか対応せず、Tailwind も使えない。
+// 出てくる概念: ファイル規約、async 関数、Promise.all、サーバー専用の node:fs
 
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -6,6 +10,7 @@ import { ImageResponse } from 'next/og'
 import type { CharacterVariant } from '@/lib/characters'
 import { getSharePageData } from '@/lib/share'
 
+// alt / size / contentType を export すると、Next.js が og:image の付属情報（説明・サイズ・形式）として使う
 export const alt = 'VeloAva サイクリストキャラクター診断'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
@@ -15,9 +20,13 @@ const OG_TEXT = {
   cta: 'あなたは何タイプ？',
 }
 
+// async 関数: 中で await を使って、画像ファイルの読み込みや通信の完了を待てる。戻り値は Promise になる
 export default async function Image({ params }: { params: { slug: string } }) {
+  // ?? は「左が null / undefined のときだけ右を使う」。存在しないキャラでも画像は返すため既定のキャラに倒している。
+  // 末尾の ! は「ここは null にならない」と TypeScript に伝える印（実行時には何もしない）
   const { characterId, sex, character, variant } = getSharePageData(params.slug) ?? getSharePageData('allrounder_male')!
 
+  // Promise.all は複数の待ち処理を同時に始めて、全部終わるのを待つ。順番に await するより速い
   const [font, imageData] = await Promise.all([
     loadJapaneseFont(`VeloAva${OG_TEXT.lead}${OG_TEXT.cta}${variant.title}${variant.name}${variant.catchphrase}`),
     // キャラ画像は next.config.mjs の outputFileTracingIncludes で関数にバンドルしている
@@ -38,6 +47,8 @@ export default async function Image({ params }: { params: { slug: string } }) {
 }
 
 // satoriはwoff2非対応。UA無しでリクエストするとGoogle FontsはTTFを返す
+// 日本語フォントは全文字だと数MBあるので、画像に使う文字だけ（text= で指定）を Google Fonts から取り寄せる。
+// 失敗しても画像生成は止めず null を返す（その場合は文字が表示されないだけ）
 async function loadJapaneseFont(text: string): Promise<ArrayBuffer | null> {
   try {
     const css = await (
@@ -51,6 +62,7 @@ async function loadJapaneseFont(text: string): Promise<ArrayBuffer | null> {
   }
 }
 
+// 画像のレイアウト。見た目は普通の JSX だが、satori は display: flex の指定が必要など制約がある
 function OgImageLayout({
   variant,
   accentColor,
