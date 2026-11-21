@@ -1,10 +1,13 @@
 // ライドの数値からルールで組み立てる一言コメント
 // AIは使わない（Strava API Policy 5.3）。結果ページの本人にだけ表示し、シェアカードには載せない
+// 呼び出し元: lib/result-data.ts（buildInsights、サーバー）と app/result/_components/EvolutionCard.tsx（buildChangeInsights、ブラウザ）
+// 仕組み: RULES の各関数がコメント候補を1つ返す → 重みの高い順に並べる → 同じ種類は1つだけにして上位3つを出す
 
 import type { AnalysisResult } from './analysis'
 import { SCORE_AXES } from './score-axes'
 import type { StoredResult } from './result-history'
 
+// AnalysisResult['stats'] のように型の一部を取り出して短い名前を付けている（型エイリアス）
 type Stats = AnalysisResult['stats']
 type Scores = AnalysisResult['scores']
 
@@ -21,8 +24,11 @@ const SKYTREE_M = 634
 const TOKYO_OSAKA_KM = 500
 const JAPAN_LENGTH_KM = 3000
 
+// 数値を日本語の書式にする小さな関数（6755 → 6,755、小数は digits 桁まで）。アロー関数 `(引数) => 式` で書いている
 const fmt = (n: number, digits = 0) => n.toLocaleString('ja-JP', { maximumFractionDigits: digits })
 
+// 「stats と scores を受け取ってコメント候補か null を返す関数」の配列。新しいコメントはここに関数を1つ足すだけで増やせる
+// 当てはまらないときは null を返す。weight は「その人らしさ」の強さで、珍しい特徴ほど大きくしている
 const RULES: ((s: Stats, sc: Scores) => Insight | null)[] = [
   // 獲得標高を身近な山・建物に換算
   (s) => {
@@ -126,10 +132,13 @@ const RULES: ((s: Stats, sc: Scores) => Insight | null)[] = [
 ]
 
 export function buildInsights(result: AnalysisResult, max = 3): string[] {
+  // 全ルールを実行し、null を取り除く。`(i): i is Insight =>` は型ガード付きの filter で、以降の配列を Insight[] として扱える
   const candidates = RULES.map((rule) => rule(result.stats, result.scores)).filter((i): i is Insight => i !== null)
+  // Set は重複しない値の集まり。すでに選んだ category を覚えておき、同じ種類のコメントが2つ並ばないようにする
   const seen = new Set<string>()
   return candidates
     .sort((a, b) => b.weight - a.weight)
+    // 初めて出てきた category なら覚えて残す（true）、2回目以降は捨てる（false）。`(a, b)` はカンマ演算子で、a を実行して b を返す
     .filter((i) => (seen.has(i.category) ? false : (seen.add(i.category), true)))
     .slice(0, max)
     .map((i) => i.text)
@@ -140,6 +149,7 @@ export function buildChangeInsights(prev: StoredResult, current: AnalysisResult,
   const lines: string[] = []
   const days = Math.max(0, Math.round((now.getTime() - new Date(prev.date).getTime()) / 86_400_000))
   const diffs = SCORE_AXES.map((a) => ({ label: a.label, diff: current.scores[a.key] - prev.scores[a.key] }))
+  // sort は元の配列を書き換えるので、[...diffs] でコピーしてから並べ替える。b - a は大きい順、a - b は小さい順
   const up = [...diffs].sort((a, b) => b.diff - a.diff)[0]
   const down = [...diffs].sort((a, b) => a.diff - b.diff)[0]
 

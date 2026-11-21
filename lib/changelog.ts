@@ -1,5 +1,7 @@
 // ユーザー向けの更新履歴（新しい順）。内部的な変更（リファクタ・計測など）は載せない
 // 先頭の1件がトップのファーストビューに「最新の更新」として出る
+// 呼び出し元: app/page.tsx（フッターの履歴）と app/_components/LatestUpdate.tsx（NEW 表示）。データと小さな関数だけなのでどこでも動く
+// 更新するときは CHANGELOG の先頭に1件足すだけ
 
 export interface ChangelogEntry {
   date: string // YYYY-MM-DD
@@ -37,11 +39,14 @@ export const CHANGELOG: ChangelogEntry[] = [
 // ファーストビューに出すのは、公開から何日以内の更新か
 export const LATEST_UPDATE_DAYS = 14
 
+// 日付は日本時間の 0 時として扱う（+09:00）。86_400_000 は1日のミリ秒（_ は桁区切りで値は 86400000）
+// `now = new Date()` は引数の既定値。テストでは好きな日時を渡して確かめられる
 export function isRecent(entry: ChangelogEntry, now = new Date()): boolean {
   return now.getTime() - new Date(`${entry.date}T00:00:00+09:00`).getTime() < LATEST_UPDATE_DAYS * 86_400_000
 }
 
 export function formatChangelogDate(date: string): string {
+  // 分割代入で先頭（年）を読み飛ばし、月と日だけ取り出す。Number() で '05' → 5 にして先頭の0を消す
   const [, m, d] = date.split('-')
   return `${Number(m)}/${Number(d)}`
 }

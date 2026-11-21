@@ -1,5 +1,8 @@
 // キャラクター定義データ。ロジックは置かず、純粋なデータだけを持つ
 // 画像は public/characters/{id}_{sex}.png
+// 文章を直すときはこのファイルだけを触る。アプリからは直接読まず、index.ts の関数経由で読む
+// 形: キャラごとに性別共通の項目（タイプ名・色・強み・アドバイス）と、variants.male / variants.female の性別ごとの文章を持つ
+// Record<CharacterId, Character> なので、6キャラのどれかが欠けたり余計なキーがあると型エラーになる
 
 import type { Character, CharacterId } from './types'
 

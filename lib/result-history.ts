@@ -1,5 +1,7 @@
 // 前回の診断結果（ブラウザのlocalStorageにのみ保存、サーバーには送らない）
 // 期間が違う診断どうしを比べると数値が大きくぶれるため、分析期間ごとに直近1件を持つ
+// 呼び出し元: app/result/_components/ResultView.tsx と app/_components/LatestUpdate.tsx の useEffect の中。ブラウザでだけ動く
+// 保存形式: { "90": {...}, "180": {...}, "365": {...} } のように期間をキーにした1つの JSON
 
 import type { AnalysisResult } from './analysis'
 import type { CharacterId } from './characters'
@@ -15,6 +17,8 @@ const STORAGE_KEY = 'veloava_last_results'
 // 期間を記録していなかった旧形式。比較に使えないので読み捨てる
 const LEGACY_KEY = 'veloava_last_result'
 
+// localStorage は文字列しか保存できないので JSON.stringify / JSON.parse で変換する
+// プライベートモードや壊れたデータで例外が出ることがあるので、try/catch で空として扱う
 function loadAll(): Record<string, StoredResult> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -34,6 +38,7 @@ export function hasDiagnosedBefore(): boolean {
 }
 
 export function loadLastResult(periodDays: number): StoredResult | null {
+  // 保存がなければ undefined になるので、`??` で null にそろえる
   return loadAll()[String(periodDays)] ?? null
 }
 

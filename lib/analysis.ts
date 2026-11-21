@@ -1,5 +1,7 @@
 // キャラクター判定ロジック
 // Stravaのライドデータを分析してサイクリストタイプを判定する
+// 呼び出し元: app/api/auth/callback/route.ts（サーバー）。画面に依存しない純粋な計算なので、架空のデータでシミュレーションもできる
+// 流れ: ライドを選ぶ → 統計を出す → 5つの能力スコア（0〜100）にする → pickCharacter で6キャラの適合度を比べて1つ選ぶ
 
 import type { StravaActivity, StravaAthlete } from './strava'
 import type { CharacterId, Sex } from './characters'
@@ -10,6 +12,7 @@ export interface AnalysisResult {
   athleteName: string
   profileImageUrl: string
   sex: Sex
+  // 結果ページに表示する生の数値。URL に載せて結果ページへ渡す
   stats: {
     totalRides: number          // 期間内のライド数
     avgDistanceKm: number       // 平均ライド距離 (km)
@@ -25,6 +28,7 @@ export interface AnalysisResult {
     peakRatio?: number          // 最大パワー÷平均パワーの中央値（大きいほど低強度にスプリントを混ぜる走り）。実測パワーがなければ 0
     variabilityIndex?: number   // NP÷平均パワーの中央値（1に近いほど一定ペース）。実測パワーがなければ 0
   }
+  // レーダーチャートとキャラ判定に使う 0〜100 の点数
   scores: {
     climbing: number     // 登坂力 0-100
     speed: number        // スピード 0-100
@@ -35,10 +39,13 @@ export interface AnalysisResult {
 }
 
 // 値を0〜100の範囲に正規化するヘルパー
+// 単位の違う値（m/km・km/h・km・W・日）を同じ 0〜100 の物差しにそろえる。min 以下は0、max 以上は100
+// min/max は一般的なロード乗りの範囲。範囲が広すぎると誰でも中くらいの点になり、個性が出ない
 function normalize(value: number, min: number, max: number): number {
   return Math.min(100, Math.max(0, Math.round(((value - min) / (max - min)) * 100)))
 }
 
+// 中央値。平均と違い、1回だけの極端なライド（レースの日など）に引っ張られにくい
 function median(values: number[]): number {
   if (values.length === 0) return 0
   const sorted = [...values].sort((a, b) => a - b)
@@ -58,9 +65,13 @@ export function pickCharacter(scores: AnalysisResult['scores'], hasPower: boolea
   const { climbing, speed, endurance, consistency } = scores
   const power = hasPower ? scores.power : speed
   const riding = [climbing, speed, endurance, consistency]
+  // reduce は配列を1つの値にまとめる（ここでは合計）。0 は初期値
   const mean = riding.reduce((a, b) => a + b, 0) / riding.length
+  // 最大と最小の差（ばらつき）。小さいほど「どれも同じくらい」＝オールラウンダー寄り
   const spread = Math.max(...riding) - Math.min(...riding)
 
+  // キャラごとの適合度。各キャラの重みは合計1にしてあり、材料の数が多いキャラだけが有利にならないようにしている
+  // `条件 ? A : B` は三項演算子。パワーの使い方が分かる人（profile がある）かどうかで式を切り替える
   const affinity: Record<CharacterId, number> = {
     climber: 0.8 * climbing + 0.2 * power,
     granfondo: 0.75 * endurance + 0.25 * climbing,
@@ -76,6 +87,7 @@ export function pickCharacter(scores: AnalysisResult['scores'], hasPower: boolea
     // 乗る頻度が低くてもロング派はグランフォンドを優先したいので少し弱める
     weekend: 0.85 * (100 - consistency),
   }
+  // Object.entries で [キャラID, 点数] の組の配列にし、reduce で点数が最大の組を残して、そのキャラIDを返す
   return (Object.entries(affinity) as [CharacterId, number][]).reduce((best, curr) => (curr[1] > best[1] ? curr : best))[0]
 }
 
@@ -89,6 +101,7 @@ export function analyzeCharacter(
   periodDays = 90
 ): AnalysisResult {
   // ライドのみにフィルタリング（ランやウォークは除外）
+  // Zwift などのバーチャルライドか、ローラー台（trainer）で記録したライドなら屋内とみなす
   const isIndoor = (a: StravaActivity) => a.type === 'VirtualRide' || a.sport_type === 'VirtualRide' || a.trainer === true
   const rides = activities.filter(
     (a) =>
@@ -129,6 +142,7 @@ export function analyzeCharacter(
   const avgHours = basis.reduce((s, r) => s + (r.moving_time ?? 0), 0) / basis.length / 3600
 
   // 週あたりの乗った日数（屋内ライドやアクティビティ分割で件数が膨らむため、日付単位で数える）
+  // start_date_local の先頭10文字は 'YYYY-MM-DD'。Set に入れると同じ日付は1つにまとまるので、size が「乗った日数」になる
   const ridingDays = new Set(rides.map((r) => r.start_date_local.slice(0, 10))).size
   const ridingDaysPerWeek = ridingDays / (periodDays / 7)
 
@@ -140,6 +154,7 @@ export function analyzeCharacter(
       : 0
 
   // パワーの使い方（要約データから推定。秒ごとのデータは取得しない）
+  // `r.max_watts!` の ! は「ここでは null ではない」と TypeScript に伝える記号。直前の filter で 0 より大きいものだけに絞っているので安全
   const peakRatio = median(powerRides.filter((r) => (r.max_watts ?? 0) > 0).map((r) => r.max_watts! / r.average_watts!))
   const variabilityIndex = median(
     powerRides.filter((r) => (r.weighted_average_watts ?? 0) > 0).map((r) => r.weighted_average_watts! / r.average_watts!),
@@ -193,6 +208,7 @@ export function analyzeCharacter(
 }
 
 // 分析結果オブジェクトを組み立てるヘルパー
+// Partial<T> は T の項目をすべて省略可能にした型。分かっている統計だけ渡し、残りは既定値の 0 で埋める
 function buildResult(
   characterId: CharacterId,
   athlete: StravaAthlete,
@@ -202,6 +218,7 @@ function buildResult(
 ): AnalysisResult {
   return {
     characterId,
+    // `||` は左が空文字や undefined なら右を使う。名前 → ユーザー名 → 固定の文字、の順に使えるものを選ぶ
     athleteName: `${athlete.firstname} ${athlete.lastname}`.trim() || athlete.username || '名無しライダー',
     profileImageUrl: athlete.profile || '',
     sex: athlete.sex === 'F' ? 'female' : 'male',
