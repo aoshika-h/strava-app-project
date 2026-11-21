@@ -1,3 +1,6 @@
+// 結果ページの「Ride Insights」（ライドの数値から組み立てた一言コメント）。ResultView が使う
+// コメントの文章は lib/insights.ts がサーバー側で作り、ここは並べて表示するだけ
+// 学べること: 表示するものがないときは null を返す、.map で一覧を描く（key に一意な値を使う）
 export default function InsightsCard({ insights, accentColor }: { insights: string[]; accentColor: string }) {
   if (insights.length === 0) return null
   return (

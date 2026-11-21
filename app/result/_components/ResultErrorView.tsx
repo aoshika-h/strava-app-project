@@ -1,3 +1,7 @@
+// 結果ページのエラー表示（URLに結果データがない／壊れているとき）。app/result/page.tsx が status を渡して使う
+// 学べること: props の型を 'missing' | 'invalid' のように決まった文字列だけに絞る（ユニオン型）、三項演算子での出し分け
+// state もブラウザ専用の処理もないので 'use client' は不要（サーバーで描画されるサーバーコンポーネント）
+
 import Link from 'next/link'
 
 export default function ResultErrorView({ status }: { status: 'missing' | 'invalid' }) {

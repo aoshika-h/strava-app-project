@@ -2,11 +2,14 @@
 // シェアカードコンポーネント
 // キャラクター情報を1枚にまとめ、ダウンロード/共有ボタン付きで表示する
 // このコンポーネントがページ最上部に配置され、ヒーローセクションを兼ねる
+// 学べること: useRef で画面上の要素（DOM）をつかむ、async 関数と try/catch/finally、必要なときだけライブラリを
+// 読み込む（動的 import）、コールバック式の関数を Promise に包んで await する、Web Share API（スマホの共有シート）
 
 import { useEffect, useRef, useState } from 'react'
 import { getVariant, type Character, type CharacterId, type Sex } from '@/lib/characters'
 import { gtagEvent } from '@/lib/gtag'
 
+// この部品が受け取る props の型。interface で形を決めておくと、渡し忘れや型違いを TypeScript が教えてくれる
 interface Props {
   character: Character
   characterId: CharacterId
@@ -17,22 +20,29 @@ interface Props {
 export default function ShareCard({ character, characterId, sex, sharePath }: Props) {
   const imageSrc = `/characters/${characterId}_${sex}.png`
   const genderText = getVariant(characterId, sex)
+  // useRef: 画面上のカード要素（<div ref={cardRef}>）をつかんでおく入れ物。値を変えても再描画は起きない。
+  // 画像化するときに「どの要素を写すか」を html2canvas に渡すために使う
   const cardRef = useRef<HTMLDivElement>(null)
   const [saving, setSaving] = useState(false)
+  // サーバーには navigator がないので typeof で確かめてから使う（ボタンの文言をスマホ/PCで変えるため）
   const isMobileDevice = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0
 
   // LINEなどのアプリ内ブラウザは window.open をブロックするため、通常のリンクで投稿画面を開く
+  // シェアURLのドメイン（本番・プレビューで変わる）。window はブラウザにしかないので useEffect で取得する
   const [origin, setOrigin] = useState('')
   useEffect(() => setOrigin(window.location.origin), [])
   const shareText = `VeloAvaでサイクリストタイプを診断したら「${genderText.name}」（${genderText.title}）だった！\nあなたは何タイプ？\n#VeloAva #ロードバイク`
   // ユーザーのシェアから来た人を自分の宣伝ポストと分けて数えるため、シェアURLにUTMを付ける（着地時に layout.tsx が share_inflow を送る）
   const shareUrl = `${origin}${sharePath}?utm_source=x&utm_medium=social&utm_campaign=user_share`
+  // X の投稿画面を開く URL。日本語や記号を URL に入れるので encodeURIComponent で変換する
   const xIntentUrl = `https://x.com/intent/post?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`
 
+  // 保存・共有ボタンの処理。画像化 → スマホなら共有シート、PCならダウンロード
   const handleSave = async () => {
     if (!cardRef.current) return
-    setSaving(true)
+    setSaving(true) // ボタンを「処理中...」にする
     try {
+      // 動的 import: html2canvas は大きいので、ボタンが押されたときに初めて読み込む（最初の表示を速くするため）
       const html2canvas = (await import('html2canvas')).default
       const canvas = await html2canvas(cardRef.current, {
         backgroundColor: '#0d0d18',
@@ -46,16 +56,18 @@ export default function ShareCard({ character, characterId, sex, sharePath }: Pr
       // タッチデバイス（SP/タブレット）: Web Share APIでネイティブ共有シートを表示
       const isMobile = navigator.maxTouchPoints > 0
       if (isMobile && navigator.share) {
+        // canvas.toBlob は結果をコールバックで返す古い形の関数なので、Promise に包んで await できるようにしている
         const blob = await new Promise<Blob>((resolve) =>
           canvas.toBlob((b) => resolve(b!), 'image/png')
         )
         const file = new File([blob], filename, { type: 'image/png' })
         gtagEvent('share_card', { method: 'share' })
+        // 共有シートを開く。ユーザーが閉じると AbortError になるので、下の catch でエラー扱いしない
         await navigator.share({ files: [file], title: 'VeloAva キャラクター診断' })
         return
       }
 
-      // デスクトップ: PNGダウンロード
+      // デスクトップ: PNGダウンロード（見えない <a download> を作ってクリックさせる定番の方法）
       gtagEvent('share_card', { method: 'download' })
       const link = document.createElement('a')
       link.download = filename
@@ -66,6 +78,7 @@ export default function ShareCard({ character, characterId, sex, sharePath }: Pr
         console.error('保存エラー:', e)
       }
     } finally {
+      // finally は成功しても失敗しても必ず実行される。ボタンを元に戻す
       setSaving(false)
     }
   }
@@ -129,7 +142,7 @@ export default function ShareCard({ character, characterId, sex, sharePath }: Pr
       </div>
 
       {/* ========== キャプチャ対象カード ========== */}
-      {/* inline styleを使う: Tailwindクラスはhtml2canvasで取りこぼすため */}
+      {/* inline styleを使う: Tailwindクラスはhtml2canvasで取りこぼすため。ref={cardRef} でこの div を画像化の対象にする */}
       <div
         ref={cardRef}
         style={{

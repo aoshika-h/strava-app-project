@@ -1,5 +1,8 @@
 'use client'
-// 診断結果ページ本体
+// 診断結果ページ本体。app/result/page.tsx（サーバー）がURLの結果データを復元し、props で渡してくる
+// 学べること: サーバーで用意したデータを受け取るクライアントコンポーネント、useEffect でブラウザの保存領域
+// （localStorage）を読み書きする、条件付き表示（&&）、配列を組み立てて .map で並べる、部品（子コンポーネント）の組み合わせ
+// 'use client': 前回結果の読み書き（localStorage）や state を使うため、ブラウザで動かす必要がある
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -14,6 +17,7 @@ import PredictionReveal from './PredictionReveal'
 import { takePrediction } from '@/lib/prediction'
 import { SCORE_AXES } from '@/lib/score-axes'
 
+// 引数を { result, insights, ... } と分解して受け取る（props の分割代入）。isPreview = false は省略時の既定値
 export default function ResultView({
   result,
   insights,
@@ -34,14 +38,17 @@ export default function ResultView({
       : stats.outdoorRides && stats.outdoorRides < stats.totalRides
         ? '（屋外）'
         : ''
+  // 前回の結果と診断前の予想はブラウザの localStorage にある。サーバーでは読めないので最初は null にしておき、
+  // 画面が出たあと useEffect の中で読み込む（サーバーとブラウザの最初の描画をそろえて hydration エラーを防ぐ）
   const [prevResult, setPrevResult] = useState<StoredResult | null>(null)
   const [predicted, setPredicted] = useState<CharacterId | null>(null)
 
+  // 第2引数の [] は「最初に表示されたときに1回だけ実行する」という意味
   useEffect(() => {
     if (isPreview) return
     setPredicted(takePrediction())
-    setPrevResult(loadLastResult(result.stats.periodDays))
-    saveLastResult(result)
+    setPrevResult(loadLastResult(result.stats.periodDays)) // 先に前回分を読んでから
+    saveLastResult(result) // 今回分で上書きする（順番を逆にすると、今回と今回を比べてしまう）
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -57,7 +64,7 @@ export default function ResultView({
 
       <div className="max-w-2xl mx-auto px-6 pt-8 pb-16 space-y-6">
 
-        {/* 診断前の予想との答え合わせ（予想した場合のみ） */}
+        {/* 診断前の予想との答え合わせ（予想した場合のみ）。{条件 && <部品 />} は条件が真のときだけ表示する書き方 */}
         {predicted && <PredictionReveal predicted={predicted} actual={result.characterId} />}
 
         {/* シェアカード */}
@@ -79,6 +86,8 @@ export default function ResultView({
           <h2 className="text-sm font-bold text-white/40 tracking-widest uppercase mb-3">Battle Records</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {[
+              // カードの中身を配列で組み立ててから .map で並べる。...（スプレッド構文）で、条件によって
+              // 配列の一部を入れたり入れなかったりしている
               // 距離が記録されないローラー練習（ERG など）だけの人は、距離・速度・標高のカードを出さない
               ...(stats.totalDistanceKm > 0
                 ? [
@@ -101,7 +110,7 @@ export default function ResultView({
           </div>
         </div>
 
-        {/* 能力チャート */}
+        {/* 能力チャート。左がレーダーチャート、右が数値のバー（バーの幅を style の width: % で指定） */}
         <div>
           <h2 className="text-sm font-bold text-white/40 tracking-widest uppercase mb-3">Ability Chart</h2>
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6">

@@ -1,4 +1,7 @@
 // 前回診断からのキャラクター・スコアの変化
+// 結果ページで、同じ期間の前回結果がブラウザに保存されているときだけ出す（ResultView が渡す）
+// 学べること: 三項演算子で2通りの表示を切り替える、<>...</>（Fragment: 余計な div を増やさずにまとめる）、
+// 小さな関数（日付の整形など）をコンポーネントの外に出しておく
 
 import type { AnalysisResult } from '@/lib/analysis'
 import { getCharacter, getVariant } from '@/lib/characters'
@@ -60,6 +63,7 @@ export default function EvolutionCard({ prev, current }: { prev: StoredResult; c
         {/* スコア差分 */}
         <div className="grid grid-cols-5 gap-2">
           {SCORE_AXES.map(({ label, key }) => {
+            // 5つの能力それぞれで今回−前回を出し、増えたら緑・減ったら赤にする
             const diff = current.scores[key] - prev.scores[key]
             const color = diff > 0 ? '#34D399' : diff < 0 ? '#F87171' : 'rgba(255,255,255,0.3)'
             return (

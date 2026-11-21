@@ -1,5 +1,8 @@
 'use client'
 // 最新の更新のお知らせ。「もう一度診断」が意味を持つ、以前に診断したことがある人にだけ、公開から14日間出す
+// トップページのファーストビュー（タイトルの上）で使う。
+// 学べること: ブラウザにしかない値（localStorage）を useEffect で読む理由（hydration エラーを避ける）、
+// 何も表示しないときは null を返す
 
 import { useEffect, useState } from 'react'
 import { CHANGELOG, formatChangelogDate, isRecent } from '@/lib/changelog'
@@ -7,9 +10,11 @@ import { hasDiagnosedBefore } from '@/lib/result-history'
 
 export default function LatestUpdate() {
   const latest = CHANGELOG[0]
+  // 最初は必ず false にしておく。サーバーには localStorage がないので、サーバーとブラウザの最初の描画を
+  // 「表示なし」でそろえ（hydration エラーを防ぐ）、表示後に useEffect の中でブラウザだけが判定して切り替える
   const [show, setShow] = useState(false)
   useEffect(() => setShow(isRecent(latest) && hasDiagnosedBefore()), [latest])
-  if (!show) return null
+  if (!show) return null // コンポーネントが null を返すと、何も描画されない
 
   return (
     <a

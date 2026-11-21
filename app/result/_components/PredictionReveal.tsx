@@ -1,4 +1,6 @@
 // 診断前の予想タイプと結果の答え合わせ
+// 結果ページの一番上に、予想したときだけ出す（ResultView が localStorage から予想を取り出して渡す）
+// 学べること: 2つの props を比べて表示を変える、grid で「予想 → 結果」を横並びにする
 
 import { getCharacter, type CharacterId } from '@/lib/characters'
 

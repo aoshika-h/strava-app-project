@@ -1,5 +1,9 @@
 'use client'
 // 診断の入り口: ① タイプを予想 → ② 期間を選んで診断
+// トップページ（app/page.tsx）のファーストビューで使う。
+// 学べること: useState で「選択中の状態」を持つ、条件付き表示（&&）、配列を .map で並べる（key）、
+// 子コンポーネント（PeriodButtons）に props で値を渡す、チェックボックスを state で管理する（制御コンポーネント）
+// 'use client': ボタンのクリックや state を使うので、ブラウザで動くクライアントコンポーネントにする必要がある
 
 import { useState } from 'react'
 import Image from 'next/image'
@@ -8,10 +12,15 @@ import type { PredictedType } from '@/lib/prediction'
 import PeriodButtons from './PeriodButtons'
 
 export default function DiagnosisStarter() {
+  // useState: [今の値, 値を変える関数] の組を返す。値を変えると、このコンポーネントが描き直される
+  // null は「まだ何も選んでいない」。選ぶまで ② の期間ボタンを出さないために使う
   const [predicted, setPredicted] = useState<PredictedType | null>(null)
   const [includePrivate, setIncludePrivate] = useState(false)
   const characters = listCharacters()
+  // 予想したキャラの情報（名前・色）。「わからない」を選んだときは null
   const picked = predicted && predicted !== 'unknown' ? characters.find((c) => c.id === predicted) : null
+
+  // return の中は JSX（HTML に似た書き方で画面を表す）。class ではなく className、{} の中に JavaScript の値を書く
 
   return (
     <div className="flex flex-col items-center gap-4 w-full">
@@ -19,6 +28,7 @@ export default function DiagnosisStarter() {
 
       <div className="grid grid-cols-3 gap-2 w-full max-w-md">
         {characters.map((c) => {
+          // .map で6キャラ分のボタンを作る。key は React が「どの要素がどれか」を見分ける目印で、配列を並べるときは必須
           const selected = predicted === c.id
           return (
             <button
@@ -60,7 +70,8 @@ export default function DiagnosisStarter() {
               あなたの予想：<span className="font-bold" style={{ color: picked.accentColor }}>{picked.typeName}</span>
             </p>
           )}
-          {/* ローラーを「自分のみ」にしている人向け。チェックしたときだけ広い権限（activity:read_all）を求める */}
+          {/* ローラーを「自分のみ」にしている人向け。チェックしたときだけ広い権限（activity:read_all）を求める。
+              checked と onChange を state につなぐ「制御コンポーネント」: 画面の表示と state が常に一致する */}
           <label className="flex items-start gap-2 max-w-sm text-left text-xs text-white/60 cursor-pointer">
             <input
               type="checkbox"
