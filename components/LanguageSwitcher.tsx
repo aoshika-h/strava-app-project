@@ -1,5 +1,6 @@
 'use client'
-// 言語の切り替え（日本語 / English / Português）。全ページの右上に出す
+// 言語の切り替え（日本語 / English / Português）。全ページの一番上に、右寄せの細い帯として出す
+// （右上に重ねて置くと、結果ページのボタンやプレビューの帯と重なるため、ページの流れの中に置いている）
 // app/[lang]/layout.tsx に置いている。押すと選んだ言語をクッキーに覚え、同じページの別言語版へ移動する
 // 学べること: usePathname（今のURLのパスを読むフック）、クッキーの書き込み、<a> の onClick で移動先を整える
 
@@ -22,7 +23,7 @@ export default function LanguageSwitcher({ current }: { current: Locale }) {
   }
 
   return (
-    <nav aria-label="Language" className="absolute top-3 right-4 z-40 flex gap-1 text-[11px]">
+    <nav aria-label="Language" className="flex justify-end gap-1 px-4 pt-3 text-[11px] bg-[#0A0A0F]">
       {LOCALES.map((locale) => {
         const active = locale === current
         return (

@@ -75,8 +75,8 @@ const SOURCE: ChangelogSource[] = [
     date: '2026-11-16',
     text: {
       ja: 'ライドの数字から「富士山○個分」などの一言コメントと、前回からの変化コメントを表示するようにしました。乗った頻度は「週に乗った日数」で数えるようにしました',
-      en: 'Added fun ride insights (like how many Everests you climbed) and comments on changes since your last diagnosis. Frequency is now counted as riding days per week',
-      pt: 'Adicionamos comentários divertidos sobre seus pedais (como quantas vezes você subiu o Everest) e sobre a mudança desde o último diagnóstico. A frequência agora conta dias pedalados por semana',
+      en: 'Added fun ride insights (like how many Mont Ventoux climbs you rode) and comments on changes since your last diagnosis. Frequency is now counted as riding days per week',
+      pt: 'Adicionamos comentários divertidos sobre seus pedais (como quantos Picos da Bandeira você subiu) e sobre a mudança desde o último diagnóstico. A frequência agora conta dias pedalados por semana',
     },
   },
   { date: '2026-11-13', text: {
