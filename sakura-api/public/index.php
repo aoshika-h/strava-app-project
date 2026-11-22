@@ -829,16 +829,17 @@ function fetch_ga_funnel(array $config, int $days): array
         ]]],
     ];
     [$top, $result, $share, $events] = ga_batch_reports($config, [
-        $pageUsers(ga_page_filter('EXACT', '/')),
+        // 2026-11 から英語（/en）・ポルトガル語（/pt）版がある。日本語は言語なしの URL。3言語を合計する
+        $pageUsers(ga_page_filter('FULL_REGEXP', '^(/en|/pt)?/?$')),
         // 動作確認用のプレビュー表示（/result?preview=...）は除く。アプリ側でも 2026-11-19 以降は計測していない
         $pageUsers(['andGroup' => ['expressions' => [
-            ga_page_filter('EXACT', '/result'),
+            ga_page_filter('FULL_REGEXP', '^(/en|/pt)?/result$'),
             ['notExpression' => ['filter' => [
                 'fieldName' => 'pagePathPlusQueryString',
                 'stringFilter' => ['matchType' => 'CONTAINS', 'value' => 'preview='],
             ]]],
         ]]]),
-        $pageUsers(ga_page_filter('BEGINS_WITH', '/c/')),
+        $pageUsers(ga_page_filter('FULL_REGEXP', '^(/en|/pt)?/c/.*')),
         [
             'dateRanges' => ga_date_range($days),
             'dimensions' => [['name' => 'eventName']],

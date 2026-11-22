@@ -40,41 +40,57 @@ Stravaアプリの **Authorization Callback Domain** は `vercel.app` に設定�
 | `lib/` | データとロジック（キャラ定義、診断、コメント、Strava API、結果の変換、前回結果の保存、GA送信など）。画面から切り離して単体で調整・シミュレーションできるようにしている |
 
 ```
+middleware.ts                 言語の振り分け（下の「多言語」）
 app/
-├── page.tsx                  トップ（_components/: DiagnosisStarter, PeriodButtons, LatestUpdate）
-├── layout.tsx                全ページ共通（GA の初期設定）
-├── result/page.tsx           結果（_components/: ResultView, ShareCard, InsightsCard, EvolutionCard, RadarChart, PredictionReveal, ResultErrorView）
-├── c/[slug]/page.tsx         キャラ紹介ページ（Xのカードの着地点）
-├── c/[slug]/opengraph-image.tsx  キャラ別OGP画像
-├── privacy/page.tsx          プライバシーポリシー
+├── [lang]/                   全ページ（ja は URL に言語なし、/en・/pt）
+│   ├── layout.tsx            全ページ共通（<html lang>、GA の初期設定、言語切り替え）
+│   ├── page.tsx              トップ（_components/: DiagnosisStarter, PeriodButtons, LatestUpdate）
+│   ├── result/page.tsx       結果（_components/: ResultView, ShareCard, InsightsCard, EvolutionCard, RadarChart, PredictionReveal, ResultErrorView）
+│   ├── c/[slug]/page.tsx     キャラ紹介ページ（Xのカードの着地点）
+│   ├── c/[slug]/opengraph-image.tsx  キャラ別OGP画像
+│   └── privacy/page.tsx      プライバシーポリシー（本文は _content/{ja,en,pt}.tsx）
+├── globals.css
 └── api/auth/{strava,callback}/route.ts  Strava OAuth の開始・コールバック
+components/                   ClickTracker, LanguageSwitcher
 lib/
-├── characters/               6キャラの定義（data.ts＝文章、index.ts＝読み出し窓口、types.ts）
+├── i18n/                     言語の設定（config.ts）と画面文言の辞書（dictionaries/{ja,en,pt}.ts）
+├── characters/               6キャラの定義（data.ts＝日本語の文章、translations/{en,pt}.ts＝訳、index.ts＝読み出し窓口、types.ts）
 ├── analysis.ts               診断ロジック
-├── insights.ts               一言コメント
+├── insights.ts               一言コメントの判定（文章と例えは insights-messages/{ja,en,pt}.ts）
 ├── strava.ts                 Strava API（取得・連携解除）
-├── oauth-state.ts            OAuth の state（期間と GA client_id）
+├── oauth-state.ts            OAuth の state（期間・GA client_id・言語）
 ├── result-data.ts            結果のURLエンコード・復元、結果ページ用データの組み立て
 ├── share.ts                  シェアページの slug
 ├── result-history.ts / prediction.ts / changelog.ts / score-axes.ts / gtag.ts
 ```
-
-- `app/c/[slug]/opengraph-image.tsx` は `node:fs` と `next/og` を使うサーバー専用。クライアントコンポーネント（`'use client'`）からサーバー専用のコードを import しない。必要な値はページ（サーバー）で計算してpropsで渡す
+- `app/[lang]/c/[slug]/opengraph-image.tsx` は `node:fs` と `next/og` を使うサーバー専用。クライアントコンポーネント（`'use client'`）からサーバー専用のコードを import しない。必要な値はページ（サーバー）で計算してpropsで渡す
 - 2026-11-20 までは `models/`・`views/`・`controllers/` に分けたMVC風の構成だった（main のコミット `7742e95`）。学習用に比較する場合はそこを見る
 
 ### 全体フロー
 
 ```
-/ (app/page.tsx)
-  └─ ① タイプ予想 → ② 期間選択（app/_components/DiagnosisStarter → PeriodButtons）→ /api/auth/strava?period=90|180|365&cid=<GA client_id>
-       └─ app/api/auth/strava/route.ts: Strava OAuth（state に期間と client_id、lib/oauth-state）
+/ (app/[lang]/page.tsx)
+  └─ ① タイプ予想 → ② 期間選択（_components/DiagnosisStarter → PeriodButtons）→ /api/auth/strava?period=90|180|365&cid=<GA client_id>&lang=en|pt
+       └─ app/api/auth/strava/route.ts: Strava OAuth（state に期間・client_id・言語、lib/oauth-state）
             └─ app/api/auth/callback/route.ts
                  ├─ lib/strava: exchangeCode() / getActivities() → revokeToken()（連携解除）
                  ├─ lib/analysis: analyzeCharacter()
-                 └─ lib/result-data: encodeResult() → /result?data=...
-                      └─ app/result/page.tsx（サーバー）→ getResultPageData()
-                           └─ app/result/_components/ResultView → ShareCard / InsightsCard / EvolutionCard / RadarChart
+                 └─ lib/result-data: encodeResult() → /result?data=...（英語は /en/result?data=...）
+                      └─ app/[lang]/result/page.tsx（サーバー）→ getResultPageData()
+                           └─ _components/ResultView → ShareCard / InsightsCard / EvolutionCard / RadarChart
 ```
+
+### 多言語（日本語・英語・ブラジルポルトガル語）
+
+Stravaのフォロワーに海外（特にブラジル）の人が多いため、2026-11 に英語・ポルトガル語版を追加した。ライブラリ（next-intl など）は使わず、自前の辞書と middleware で作っている。
+
+- **URL**: 日本語は言語なし（`/`・`/result`・`/c/...`、既存のシェアURLをそのまま使うため）、英語は `/en/...`、ポルトガル語は `/pt/...`（`<html lang="pt-BR">`）。ページはすべて `app/[lang]/` の下にあり、`middleware.ts` が言語なしのURLを内部で `/ja/...` に書き換える（rewrite）。`/ja/...` と書かれたら言語なしへ転送する
+- **自動の振り分け**: 入口（トップと `/c/...`）に来たときだけ、言語切り替えで選んだCookie `veloava_locale`、なければブラウザの `Accept-Language`（ja→日本語、pt→ポルトガル語、その他→英語、なし→日本語）で振り分ける。結果ページ・プライバシーは来たURLの言語のまま。クローラー（Xのカード取得）は振り分けない
+- **文言**: 画面の文言は `lib/i18n/dictionaries/{ja,en,pt}.ts`（`Dictionary` 型＝日本語辞書と同じ形でないとビルドが通らない）。キャラは `lib/characters/translations/{en,pt}.ts`、一言コメントは `lib/insights-messages/{ja,en,pt}.ts`（富士山→Mont Ventoux / Pico da Bandeira のように例えも国ごと）、更新履歴は `lib/changelog.ts` の各項目に `en`・`pt` を足す（訳のない項目はその言語では出ない）、プライバシーは `app/[lang]/privacy/_content/`
+- **文言を足すとき**: まず `ja.ts` に足し、`en.ts`・`pt.ts` にも足す（型エラーで漏れが分かる）。数や名前が入る文言は語順が違うので、連結せず関数（`(name) => ...`）にする
+- **Strava 認証**: 言語を `/api/auth/strava?lang=` → OAuth の `state`（`期間:client_id:言語`、日本語は省略）で持ち回り、コールバックはその言語の `/result`・トップへ戻す
+- **GA**: `diagnosis_start` の `period` は言語に関係なく日本語の表記（3ヶ月など）で送る。ページは `/en`・`/pt` 付きのパスで記録されるので、ページで絞るときは `^(/en|/pt)?/result$` のような正規表現を使う（さくらの `ga_funnel` は対応済み）
+- 診断ロジック・スコア・キャラ判定は言語に関係なく同じ
 
 ### セッションレス設計
 
@@ -111,27 +127,27 @@ Strava API Policy 5.3条により、Strava Data（APIで取得した全データ
 
 ### ライドの一言コメント (`lib/insights.ts`)
 
-`buildInsights()` が統計・スコアから「富士山○個分」「週○回、継続の鬼」のようなコメントをルールで組み立て、重みの高い順に別カテゴリから最大3つ選ぶ（`lib/result-data.ts` で生成し `app/result/_components/InsightsCard.tsx` が表示）。`buildChangeInsights()` はブラウザに保存した前回のキャラ・スコアとの差分コメントを作り、`EvolutionCard` に出す。AIは使わない。数値を含むため結果ページの本人向け表示に限り、シェアカード・OGP画像には載せない。新しいコメントは `RULES` に関数を1つ足せば増やせる。
+`buildInsights()` が統計・スコアから「富士山○個分」「週○回、継続の鬼」のようなコメントをルールで組み立て、重みの高い順に別カテゴリから最大3つ選ぶ（`lib/result-data.ts` で生成し `app/[lang]/result/_components/InsightsCard.tsx` が表示）。`buildChangeInsights()` はブラウザに保存した前回のキャラ・スコアとの差分コメントを作り、`EvolutionCard` に出す。AIは使わない。数値を含むため結果ページの本人向け表示に限り、シェアカード・OGP画像には載せない。新しいコメントは `RULES` に関数を1つ足し、文章を `lib/insights-messages` の型と3言語に足す。
 
 ### 頻度と前回比較の注意点
 
 - 頻度は「週あたりの乗った日数」（`ridingDaysPerWeek`、`start_date_local` の日付で数える）。Zwiftなど屋内ライドや1回の外出の分割で件数が膨らむため、アクティビティ件数では数えない。旧URLの `ridesPerWeek` は `lib/result-data.ts` の `decodeResult` で読み替える
 - 前回結果（`lib/result-history.ts`）は分析期間ごとに1件ずつ保存し、同じ期間どうしでのみ比較する。期間が違う診断を比べると数値が大きくぶれるため
 
-### シェアカード (`app/result/_components/ShareCard.tsx`)
+### シェアカード (`app/[lang]/result/_components/ShareCard.tsx`)
 
 `html2canvas` でDOMをキャプチャして画像化する。Tailwindクラスはキャプチャ時に取りこぼすため、カード内のスタイルはすべてinline styleで記述する（Tailwindクラスはカード外のUIにのみ使用）。
 
 - **SP/タブレット** (`navigator.maxTouchPoints > 0`): Web Share API (`navigator.share`) でネイティブ共有シートを表示
 - **PC**: PNGファイルをダウンロード
 
-### Xシェア (`app/c/[slug]/`)
+### Xシェア (`app/[lang]/c/[slug]/`)
 
-結果ページの「Xでポスト」ボタンは `/c/{characterId}_{sex}` をintent URLで投稿する。`app/c/[slug]/opengraph-image.tsx` が `next/og` でキャラ別OGP画像を生成し、Xのタイムラインに画像付きカードを出す。キャラ画像はfsで読むため `next.config.mjs` の `outputFileTracingIncludes` で関数にバンドルしている。日本語フォントはGoogle FontsからNoto Sans JPを必要文字だけ取得する。
+結果ページの「Xでポスト」ボタンは `/c/{characterId}_{sex}`（英語・ポルトガル語の画面からは `/en/c/...`・`/pt/c/...`）をintent URLで投稿する。`app/[lang]/c/[slug]/opengraph-image.tsx` が `next/og` でキャラ別OGP画像を生成し、Xのタイムラインに画像付きカードを出す。キャラ画像はfsで読むため `next.config.mjs` の `outputFileTracingIncludes` で関数にバンドルしている。日本語フォントはGoogle FontsからNoto Sans JPを必要文字だけ取得する（英語・ポルトガル語の文字も含む）。
 
 ### GA4 計測
 
-`NEXT_PUBLIC_GA_ID` が設定されているときだけ送信する（`lib/gtag.ts`）。プレビュー表示（`?preview=` 付きのURLで開いたとき）は `app/layout.tsx` で `gtag('config')` を呼ばないので、ページビューもイベントも送られない。
+`NEXT_PUBLIC_GA_ID` が設定されているときだけ送信する（`lib/gtag.ts`）。プレビュー表示（`?preview=` 付きのURLで開いたとき）は `app/[lang]/layout.tsx` で `gtag('config')` を呼ばないので、ページビューもイベントも送られない。
 
 Strava認証ではXやLINEのアプリ内ブラウザからStravaアプリ・Safariに切り替わることが多く、GAでは別人として数えられる。そのため診断開始時にGAの `client_id` を取得し（`getGaClientId()`）、`/api/auth/strava?cid=` → OAuthの `state`（`期間:client_id`）→ `/result?...&cid=` と持ち回り、結果ページでは `gtag('config', GA_ID, { client_id })` で同じ人として計測してからURLの `cid` を消す。GAのリンカー（`_gl`）はブラウザが変わると無効になりStrava経由で消えるため使わない。クリック計測は、ハンドラを持つボタンは `gtagEvent()` を直接呼び、それ以外のリンクは要素に `data-ga-event`（と任意で `data-ga-id`）を付ければ `components/ClickTracker.tsx` が拾う。
 
@@ -139,7 +155,7 @@ Strava認証ではXやLINEのアプリ内ブラウザからStravaアプリ・Saf
 |---|---|---|
 | `diagnosis_start` | トップの期間ボタン | `period`, `predicted_type`, `include_private` |
 | `share_x` | 結果ページの「Xでポスト」（投稿画面を開いただけで、実際に投稿されたかは分からない） | なし |
-| `share_inflow` | ユーザーのXシェアから `/c/...` に着地したとき（`app/layout.tsx` の初期化スクリプトで送る。**GA側でキーイベント＝CVに設定、カウントはセッションに1回**） | なし |
+| `share_inflow` | ユーザーのXシェアから `/c/...`（`/en/c/...`・`/pt/c/...` も）に着地したとき（`app/[lang]/layout.tsx` の初期化スクリプトで送る。**GA側でキーイベント＝CVに設定、カウントはセッションに1回**） | なし |
 | `share_card` | 結果ページの保存・共有ボタン | `method` = share / download |
 | `retry_diagnosis` | 結果ページの「もう一度診断する」 | なし |
 | `share_page_cta` | キャラ紹介ページ（`/c/...`）の「あなたも診断する」 | なし |
@@ -153,11 +169,11 @@ Strava認証ではXやLINEのアプリ内ブラウザからStravaアプリ・Saf
 
 ### 更新履歴 (`lib/changelog.ts`)
 
-ユーザー向けの変更（判定・表示・プライバシーなど）をリリースしたら `CHANGELOG` の先頭に1件足す。先頭の1件は、以前に診断したことがある人（ブラウザに前回結果がある人）にだけ、公開から14日間トップのファーストビューに「NEW」として出る（`app/_components/LatestUpdate.tsx`。長い場合は `headline` に短い一文を入れる）。初めての人には関係のない話なので出さない。フッター（`#changelog`）には最新3件を出し、残りは「すべて見る」で開く。リファクタや計測など、ユーザーから見えない変更は載せない。
+ユーザー向けの変更（判定・表示・プライバシーなど）をリリースしたら `lib/changelog.ts` の `SOURCE` の先頭に1件足す（`ja` は必須、`en`・`pt` も書く）。先頭の1件は、以前に診断したことがある人（ブラウザに前回結果がある人）にだけ、公開から14日間トップのファーストビューに「NEW」として出る（`app/[lang]/_components/LatestUpdate.tsx`。長い場合は `headline` に短い一文を入れる）。初めての人には関係のない話なので出さない。フッター（`#changelog`）には最新3件を出し、残りは「すべて見る」で開く。リファクタや計測など、ユーザーから見えない変更は載せない。
 
 ### プレビューモード
 
-`/result?preview=climber&sex=female` のようにURLパラメータを指定するとモックデータで結果ページをテスト表示できる（`?data=` より優先）。キャラクターID: `climber | sprinter | tt | granfondo | allrounder | weekend`。
+`/result?preview=climber&sex=female`（英語は `/en/result?preview=...`）のようにURLパラメータを指定するとモックデータで結果ページをテスト表示できる（`?data=` より優先）。キャラクターID: `climber | sprinter | tt | granfondo | allrounder | weekend`。
 
 ## Strava API の制約
 

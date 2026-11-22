@@ -65,12 +65,12 @@ claude.ai のカスタムコネクタ（`sakura_icu_api`）として登録済み
 - 認証: サービスアカウントの JWT（RS256、`openssl_sign`）をトークンに交換し、GA4 Data API の `batchRunReports` を呼ぶ。Composer 不要
 - 設定: `GA_PROPERTY_ID`（数字のプロパティ ID）と、鍵ファイル `GA_SA_KEY_FILE`（既定 `/home/aoshika-h/ga-service-account.json`、公開ディレクトリの外、600）。未設定なら `ga_*` は 503 を返し、intervals.icu 側には影響しない
 - サービスアカウントは GA プロパティに「閲覧者」で追加する。スコープは `analytics.readonly`
-- **Strava API Policy 5.4**: 診断結果のキャラ別の集計は返さない。キャラ紹介ページ `/c/{characterId}_{sex}` は `BEGINS_WITH /c/` で必ず合計にまとめ、`pagePath` をディメンションとして要求しない。新しいツールを足すときもこれを守る
+- **Strava API Policy 5.4**: 診断結果のキャラ別の集計は返さない。キャラ紹介ページ `/c/{characterId}_{sex}`（英語・ポルトガル語は `/en/c/...`・`/pt/c/...`）は `FULL_REGEXP ^(/en|/pt)?/c/.*` で必ず合計にまとめ、`pagePath` をディメンションとして要求しない。新しいツールを足すときもこれを守る
 
 | MCP ツール | REST | 内容 |
 |---|---|---|
 | `ga_summary(days=7)` | `GET /ga/summary` | ユーザー数・新規・セッション・PV、VeloAva のイベント別の回数とユーザー数（CV は `share_inflow`） |
-| `ga_funnel(days=7)` | `GET /ga/funnel` | トップ → 診断開始 → 結果 → Xポスト、キャラ紹介ページ（合計）→ シェア経由の着地（`share_inflow`・CV）→ 診断CTA のユーザー数と転換率、Xポスト1人あたりの流入数。結果ページは `?preview=` を除く |
+| `ga_funnel(days=7)` | `GET /ga/funnel` | トップ → 診断開始 → 結果 → Xポスト、キャラ紹介ページ（合計）→ シェア経由の着地（`share_inflow`・CV）→ 診断CTA のユーザー数と転換率、Xポスト1人あたりの流入数。結果ページは `?preview=` を除く。トップ・結果・キャラ紹介は日本語（言語なし）・`/en`・`/pt` の合計 |
 | `ga_predicted_types(days=28)` | `GET /ga/predicted-types` | 予想タイプ別の診断開始。GA にイベント単位のカスタムディメンション `predicted_type` の登録が必要 |
 | `ga_trend(days=14)` | `GET /ga/trend` | 日別のアクティブユーザーと diagnosis_start / share_x / share_inflow / share_page_cta |
 
