@@ -1,5 +1,5 @@
 // キャラ別シェアページ: Xのカードから来た人を診断に誘導する着地点
-// URL は /c/climber_male のような形。フォルダ名の [slug] は「動的セグメント」で、URL のその部分が params.slug に入る。
+// URL は /c/climber_male（英語は /en/c/climber_male）のような形。フォルダ名の [slug]・[lang] は「動的セグメント」で、URL のその部分が params.slug・params.lang に入る。
 // 同じフォルダの opengraph-image.tsx が、このページの OGP 画像（Xのカードの画像）を自動で担当する。
 // 出てくる概念: 動的ルート、params、generateMetadata、notFound()
 
@@ -8,18 +8,21 @@ import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { getSharePageData } from '@/lib/share'
+import { getDictionary, localePath, type Locale } from '@/lib/i18n'
 
 interface PageProps {
-  params: { slug: string }
+  params: { slug: string; lang: string }
 }
 
 // generateMetadata はページごとに中身が変わる <title> や OGP を作るための関数（固定なら export const metadata でよい）。
 // Xのボットはこの <meta> を読んでカードを作るので、キャラ名入りのタイトルにしている
 export function generateMetadata({ params }: PageProps): Metadata {
-  const data = getSharePageData(params.slug)
+  const lang = params.lang as Locale
+  const t = getDictionary(lang).sharePage
+  const data = getSharePageData(params.slug, lang)
   if (!data) return {}
-  const title = `私のサイクリストタイプは「${data.variant.name}」 — VeloAva`
-  const description = 'Stravaのライドデータから、あなたのサイクリストタイプを6種類のキャラクターで診断します。'
+  const title = t.metaTitle(data.variant.name)
+  const description = t.metaDescription
   return {
     title,
     description,
@@ -29,7 +32,9 @@ export function generateMetadata({ params }: PageProps): Metadata {
 }
 
 export default function SharePage({ params }: PageProps) {
-  const data = getSharePageData(params.slug)
+  const lang = params.lang as Locale
+  const t = getDictionary(lang).sharePage
+  const data = getSharePageData(params.slug, lang)
   // notFound() を呼ぶとそこで処理が止まり、404 ページが表示される（/c/nope_male のような存在しないキャラ）
   if (!data) notFound()
   const { characterId, sex, character, variant } = data
@@ -58,13 +63,13 @@ export default function SharePage({ params }: PageProps) {
 
         <Link
           data-ga-event="share_page_cta"
-          href="/"
+          href={localePath(lang, '/')}
           className="inline-block font-black px-8 py-4 rounded-2xl text-white transition-transform hover:-translate-y-0.5"
           style={{ backgroundColor: '#FC4C02', boxShadow: '0 4px 24px #FC4C0255' }}
         >
-          あなたも診断する →
+          {t.cta}
         </Link>
-        <p className="mt-4 text-xs text-white/30">Stravaと連携して30秒で診断</p>
+        <p className="mt-4 text-xs text-white/30">{t.note}</p>
       </div>
     </main>
   )

@@ -1,10 +1,11 @@
 // 診断結果のURLパラメータとの相互変換と、結果ページに渡すデータの組み立て
 // サーバーレスでセッションを持たないため、結果はJSON→Base64urlでURLに載せる
-// 呼び出し元: app/api/auth/callback/route.ts（encodeResult）と app/result/page.tsx（getResultPageData）。Buffer を使うのでサーバーでだけ動く
+// 呼び出し元: app/api/auth/callback/route.ts（encodeResult）と app/[lang]/result/page.tsx（getResultPageData）。Buffer を使うのでサーバーでだけ動く
 
 import type { AnalysisResult } from '@/lib/analysis'
 import { isCharacterId, type CharacterId, type Sex } from '@/lib/characters'
 import { buildInsights } from '@/lib/insights'
+import type { Locale } from '@/lib/i18n/config'
 
 // 結果ページに渡すデータの型。status の値によって中身が変わる（判別可能なユニオン型）
 // status === 'ok' を確かめると、TypeScript が result や insights があると分かってくれる
@@ -41,15 +42,16 @@ export function decodeResult(encoded: string): AnalysisResult | null {
 
 // ?preview=climber&sex=female でモックデータを表示する（?data= より優先）
 // 引数の `data?: string` の ? は「無いこともある」。URL のクエリはどれも省略されうる
-export function getResultPageData(params: { data?: string; preview?: string; sex?: string }): ResultPageData {
+// locale は一言コメントの言語（診断結果そのものは言語に関係なく同じ）
+export function getResultPageData(params: { data?: string; preview?: string; sex?: string }, locale: Locale): ResultPageData {
   if (isCharacterId(params.preview)) {
     const sex: Sex = params.sex === 'female' ? 'female' : 'male'
     const result = buildPreviewResult(params.preview, sex)
-    return { status: 'ok', result, insights: buildInsights(result), isPreview: true }
+    return { status: 'ok', result, insights: buildInsights(result, locale), isPreview: true }
   }
   if (!params.data) return { status: 'missing' }
   const result = decodeResult(params.data)
-  return result ? { status: 'ok', result, insights: buildInsights(result), isPreview: false } : { status: 'invalid' }
+  return result ? { status: 'ok', result, insights: buildInsights(result, locale), isPreview: false } : { status: 'invalid' }
 }
 
 function buildPreviewResult(characterId: CharacterId, sex: Sex): AnalysisResult {

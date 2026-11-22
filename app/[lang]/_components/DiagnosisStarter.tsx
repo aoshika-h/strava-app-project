@@ -1,6 +1,6 @@
 'use client'
 // 診断の入り口: ① タイプを予想 → ② 期間を選んで診断
-// トップページ（app/page.tsx）のファーストビューで使う。
+// トップページ（app/[lang]/page.tsx）のファーストビューで使う。
 // 学べること: useState で「選択中の状態」を持つ、条件付き表示（&&）、配列を .map で並べる（key）、
 // 子コンポーネント（PeriodButtons）に props で値を渡す、チェックボックスを state で管理する（制御コンポーネント）
 // 'use client': ボタンのクリックや state を使うので、ブラウザで動くクライアントコンポーネントにする必要がある
@@ -8,15 +8,18 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { listCharacters } from '@/lib/characters'
+import { getDictionary, type Locale } from '@/lib/i18n'
 import type { PredictedType } from '@/lib/prediction'
 import PeriodButtons from './PeriodButtons'
 
-export default function DiagnosisStarter() {
+// lang はページ（サーバー）から props で受け取る。辞書は文字だけのデータなので、ブラウザ側の部品でもそのまま読める
+export default function DiagnosisStarter({ lang }: { lang: Locale }) {
+  const t = getDictionary(lang).starter
   // useState: [今の値, 値を変える関数] の組を返す。値を変えると、このコンポーネントが描き直される
   // null は「まだ何も選んでいない」。選ぶまで ② の期間ボタンを出さないために使う
   const [predicted, setPredicted] = useState<PredictedType | null>(null)
   const [includePrivate, setIncludePrivate] = useState(false)
-  const characters = listCharacters()
+  const characters = listCharacters(lang)
   // 予想したキャラの情報（名前・色）。「わからない」を選んだときは null
   const picked = predicted && predicted !== 'unknown' ? characters.find((c) => c.id === predicted) : null
 
@@ -24,7 +27,7 @@ export default function DiagnosisStarter() {
 
   return (
     <div className="flex flex-col items-center gap-4 w-full">
-      <p className="text-base font-bold text-white/80">① あなたのタイプはどれだと思う？</p>
+      <p className="text-base font-bold text-white/80">{t.step1}</p>
 
       <div className="grid grid-cols-3 gap-2 w-full max-w-md">
         {characters.map((c) => {
@@ -59,15 +62,15 @@ export default function DiagnosisStarter() {
         aria-pressed={predicted === 'unknown'}
         className={`text-xs underline underline-offset-2 ${predicted === 'unknown' ? 'text-white' : 'text-white/40 hover:text-white/70'}`}
       >
-        わからない・予想しない
+        {t.unknown}
       </button>
 
       {predicted && (
         <div className="flex flex-col items-center gap-3 mt-4">
-          <p className="text-base font-bold text-white/80">② 分析する期間を選んで診断！</p>
+          <p className="text-base font-bold text-white/80">{t.step2}</p>
           {picked && (
             <p className="text-xs text-white/50">
-              あなたの予想：<span className="font-bold" style={{ color: picked.accentColor }}>{picked.typeName}</span>
+              {t.yourGuess}<span className="font-bold" style={{ color: picked.accentColor }}>{picked.typeName}</span>
             </p>
           )}
           {/* ローラーを「自分のみ」にしている人向け。チェックしたときだけ広い権限（activity:read_all）を求める。
@@ -80,11 +83,11 @@ export default function DiagnosisStarter() {
               className="mt-0.5 h-4 w-4 flex-shrink-0 accent-[#FC4C02]"
             />
             <span>
-              「自分のみ」に設定したライドも含める
-              <span className="block text-white/40">ローラーの記録を非公開にしている方向け。Stravaの許可画面で、非公開のアクティビティの読み取りも求めます</span>
+              {t.includePrivate}
+              <span className="block text-white/40">{t.includePrivateNote}</span>
             </span>
           </label>
-          <PeriodButtons predicted={predicted} includePrivate={includePrivate} />
+          <PeriodButtons lang={lang} predicted={predicted} includePrivate={includePrivate} />
         </div>
       )}
     </div>

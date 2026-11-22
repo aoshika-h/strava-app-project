@@ -1,5 +1,5 @@
 // Strava OAuth の開始: Strava の許可画面へリダイレクトする
-// URL は /api/auth/strava?period=180&cid=... 。route.ts は画面ではなく API（リクエストを受けて応答を返す）を作るファイル規約で、
+// URL は /api/auth/strava?period=180&cid=...&lang=pt 。route.ts は画面ではなく API（リクエストを受けて応答を返す）を作るファイル規約で、
 // export した関数名（GET / POST など）が HTTP メソッドに対応する。
 // OAuth の流れ: ①ここで Strava の許可画面へ飛ばす → ②ユーザーが許可 → ③Strava が /api/auth/callback に code を付けて戻す
 
@@ -26,8 +26,8 @@ export function GET(request: NextRequest) {
   // ローラーを「自分のみ」にしている人が自分で選んだときだけ read_all を求める
   const includePrivate = searchParams.get('private') === '1'
   authUrl.searchParams.set('scope', includePrivate ? 'read,activity:read_all' : 'read,activity:read')
-  // 期間（と GA の client_id）を state でコールバックに引き渡す
-  authUrl.searchParams.set('state', buildState(searchParams.get('period'), searchParams.get('cid')))
+  // 期間・GA の client_id・表示言語を state でコールバックに引き渡す（結果ページを同じ言語で出すため）
+  authUrl.searchParams.set('state', buildState(searchParams.get('period'), searchParams.get('cid'), searchParams.get('lang')))
 
   // NextResponse.redirect は「このURLへ移動して」という応答（HTTP 307）を返す。ブラウザが自動で Strava へ移る
   return NextResponse.redirect(authUrl.toString())

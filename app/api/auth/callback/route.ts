@@ -8,25 +8,28 @@ import { exchangeCode, getActivities, revokeToken } from '@/lib/strava'
 import { analyzeCharacter } from '@/lib/analysis'
 import { encodeResult } from '@/lib/result-data'
 import { parseState } from '@/lib/oauth-state'
+import { localePath } from '@/lib/i18n/config'
 
 // async にしているのは、Strava への通信の完了を await で待つため
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl
+  // state はキャンセル時も Strava が返すので、先に読んでエラー時も元の言語のトップへ戻す
+  const { periodDays, cid, locale } = parseState(searchParams.get('state'))
+  // 言語ごとのトップ（日本語は /、英語は /en）。localePath('en', '/result') → '/en/result'
+  const top = `${origin}${localePath(locale, '/')}`
 
   // ユーザーが許可画面で「キャンセル」を押すと error 付きで戻ってくる
   if (searchParams.get('error')) {
-    return NextResponse.redirect(`${origin}/?error=access_denied`)
+    return NextResponse.redirect(`${top}?error=access_denied`)
   }
 
   const code = searchParams.get('code')
   if (!code) {
-    return NextResponse.redirect(`${origin}/?error=no_code`)
+    return NextResponse.redirect(`${top}?error=no_code`)
   }
 
   // try の中で起きたエラー（通信失敗など）は catch に飛ぶ。どこで失敗してもトップに戻してエラー表示する
   try {
-    const { periodDays, cid } = parseState(searchParams.get('state'))
-
     // code（一度きりの引換券）を、APIを呼ぶためのアクセストークンに交換する
     const { access_token, refresh_token, athlete } = await exchangeCode(code)
     const since = Math.floor(Date.now() / 1000) - periodDays * 24 * 60 * 60
@@ -37,13 +40,13 @@ export async function GET(request: NextRequest) {
     const result = analyzeCharacter(activities, athlete, periodDays)
 
     // 診断結果を JSON → Base64url にして URL に載せ、結果ページへ移動させる（cid は GA で同じ人として数えるための ID）
-    return NextResponse.redirect(`${origin}/result?data=${encodeResult(result)}${cid ? `&cid=${cid}` : ''}`)
+    return NextResponse.redirect(`${origin}${localePath(locale, '/result')}?data=${encodeResult(result)}${cid ? `&cid=${cid}` : ''}`)
   } catch (err) {
     console.error('Strava診断エラー:', err)
     // catch で受け取る err の型は不明（unknown）なので、as で形を仮定して code を読む
     if ((err as { code?: string }).code === 'athlete_limit') {
-      return NextResponse.redirect(`${origin}/?error=athlete_limit`)
+      return NextResponse.redirect(`${top}?error=athlete_limit`)
     }
-    return NextResponse.redirect(`${origin}/?error=analysis_failed`)
+    return NextResponse.redirect(`${top}?error=analysis_failed`)
   }
 }

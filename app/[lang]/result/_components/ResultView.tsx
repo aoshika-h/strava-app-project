@@ -1,5 +1,5 @@
 'use client'
-// 診断結果ページ本体。app/result/page.tsx（サーバー）がURLの結果データを復元し、props で渡してくる
+// 診断結果ページ本体。app/[lang]/result/page.tsx（サーバー）がURLの結果データを復元し、props で渡してくる
 // 学べること: サーバーで用意したデータを受け取るクライアントコンポーネント、useEffect でブラウザの保存領域
 // （localStorage）を読み書きする、条件付き表示（&&）、配列を組み立てて .map で並べる、部品（子コンポーネント）の組み合わせ
 // 'use client': 前回結果の読み書き（localStorage）や state を使うため、ブラウザで動かす必要がある
@@ -15,28 +15,34 @@ import RadarChart from './RadarChart'
 import InsightsCard from './InsightsCard'
 import PredictionReveal from './PredictionReveal'
 import { takePrediction } from '@/lib/prediction'
-import { SCORE_AXES } from '@/lib/score-axes'
+import { SCORE_KEYS } from '@/lib/score-axes'
+import { getDictionary, localePath, type Locale } from '@/lib/i18n'
 
 // 引数を { result, insights, ... } と分解して受け取る（props の分割代入）。isPreview = false は省略時の既定値
 export default function ResultView({
+  lang,
   result,
   insights,
   sharePath,
   isPreview = false,
 }: {
+  lang: Locale
   result: AnalysisResult
   insights: string[]
   sharePath: string
   isPreview?: boolean
 }) {
-  const character = getCharacter(result.characterId)
+  const t = getDictionary(lang)
+  const character = getCharacter(result.characterId, lang)
   const { stats, scores } = result
+  // 数値をその言語の書式で（1,234 / 1.234）
+  const num = (n: number) => n.toLocaleString(t.numberLocale)
   // 屋内ライドが混ざっているときは、実走だけで計算した項目だとわかるようにする
   const outdoorTag =
     stats.outdoorRides === 0 && stats.totalRides > 0
-      ? '（屋内）'
+      ? t.result.indoorTag
       : stats.outdoorRides && stats.outdoorRides < stats.totalRides
-        ? '（屋外）'
+        ? t.result.outdoorTag
         : ''
   // 前回の結果と診断前の予想はブラウザの localStorage にある。サーバーでは読めないので最初は null にしておき、
   // 画面が出たあと useEffect の中で読み込む（サーバーとブラウザの最初の描画をそろえて hydration エラーを防ぐ）
@@ -58,17 +64,18 @@ export default function ResultView({
       {/* プレビューバナー */}
       {isPreview && (
         <div className="bg-yellow-500/20 border-b border-yellow-500/30 text-yellow-400 text-xs text-center py-2 tracking-widest">
-          ⚡ PREVIEW MODE — テスト表示中
+          {t.result.preview}
         </div>
       )}
 
       <div className="max-w-2xl mx-auto px-6 pt-8 pb-16 space-y-6">
 
         {/* 診断前の予想との答え合わせ（予想した場合のみ）。{条件 && <部品 />} は条件が真のときだけ表示する書き方 */}
-        {predicted && <PredictionReveal predicted={predicted} actual={result.characterId} />}
+        {predicted && <PredictionReveal lang={lang} predicted={predicted} actual={result.characterId} />}
 
         {/* シェアカード */}
         <ShareCard
+          lang={lang}
           character={character}
           characterId={result.characterId}
           sex={result.sex}
@@ -79,7 +86,7 @@ export default function ResultView({
         <InsightsCard insights={insights} accentColor={character.accentColor} />
 
         {/* キャラクター変化（前回診断がある場合のみ表示） */}
-        {prevResult && <EvolutionCard prev={prevResult} current={result} />}
+        {prevResult && <EvolutionCard lang={lang} prev={prevResult} current={result} />}
 
         {/* ライド統計 */}
         <div>
@@ -91,15 +98,15 @@ export default function ResultView({
               // 距離が記録されないローラー練習（ERG など）だけの人は、距離・速度・標高のカードを出さない
               ...(stats.totalDistanceKm > 0
                 ? [
-                    { label: '合計距離', value: `${stats.totalDistanceKm.toLocaleString()} km`, icon: '🛣️' },
-                    { label: `平均距離${outdoorTag}`, value: `${stats.avgDistanceKm} km`, icon: '📏' },
-                    { label: `平均速度${outdoorTag}`, value: `${stats.avgSpeedKmh} km/h`, icon: '⚡' },
-                    { label: '総獲得標高', value: `${stats.totalElevationM.toLocaleString()} m`, icon: '🏔️' },
-                    { label: `山岳比率${outdoorTag}`, value: `${stats.climbingRatioMPerKm} m/km`, icon: '📈' },
+                    { label: t.result.totalDistance, value: `${num(stats.totalDistanceKm)} km`, icon: '🛣️' },
+                    { label: `${t.result.avgDistance}${outdoorTag}`, value: `${num(stats.avgDistanceKm)} km`, icon: '📏' },
+                    { label: `${t.result.avgSpeed}${outdoorTag}`, value: `${num(stats.avgSpeedKmh)} km/h`, icon: '⚡' },
+                    { label: t.result.totalElevation, value: `${num(stats.totalElevationM)} m`, icon: '🏔️' },
+                    { label: `${t.result.climbingRatio}${outdoorTag}`, value: `${num(stats.climbingRatioMPerKm)} m/km`, icon: '📈' },
                   ]
                 : []),
-              { label: '乗った日数', value: `週${stats.ridingDaysPerWeek}日`, icon: '📅' },
-              ...(stats.avgWatts > 0 ? [{ label: '平均パワー', value: `${stats.avgWatts} W`, icon: '💪' }] : []),
+              { label: t.result.ridingDays, value: t.result.daysPerWeek(num(stats.ridingDaysPerWeek)), icon: '📅' },
+              ...(stats.avgWatts > 0 ? [{ label: t.result.avgPower, value: `${num(stats.avgWatts)} W`, icon: '💪' }] : []),
             ].map((item) => (
               <div key={item.label} className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
                 <div className="text-2xl mb-1">{item.icon}</div>
@@ -116,21 +123,21 @@ export default function ResultView({
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
             <div className="md:flex items-center gap-6">
               <div className="flex-shrink-0 mb-4 md:mb-0">
-                <RadarChart scores={scores} color={character.accentColor} />
+                <RadarChart lang={lang} scores={scores} color={character.accentColor} />
               </div>
               <div className="flex-1 space-y-3">
-                {SCORE_AXES.map((item) => (
-                  <div key={item.key}>
+                {SCORE_KEYS.map((key) => (
+                  <div key={key}>
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-white/60">{item.label}</span>
+                      <span className="text-white/60">{t.axes[key]}</span>
                       <span className="font-bold" style={{ color: character.accentColor }}>
-                        {scores[item.key]}
+                        {scores[key]}
                       </span>
                     </div>
                     <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full"
-                        style={{ width: `${scores[item.key]}%`, backgroundColor: character.accentColor }}
+                        style={{ width: `${scores[key]}%`, backgroundColor: character.accentColor }}
                       />
                     </div>
                   </div>
@@ -182,10 +189,10 @@ export default function ResultView({
         <div className="text-center pt-2">
           <Link
             data-ga-event="retry_diagnosis"
-            href="/"
+            href={localePath(lang, '/')}
             className="inline-flex items-center gap-2 bg-white/8 hover:bg-white/12 border border-white/10 text-white/70 hover:text-white font-medium px-8 py-3 rounded-xl transition-colors text-sm"
           >
-            ← もう一度診断する
+            {t.result.retry}
           </Link>
         </div>
       </div>

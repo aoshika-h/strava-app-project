@@ -8,18 +8,21 @@
 import { useEffect, useRef, useState } from 'react'
 import { getVariant, type Character, type CharacterId, type Sex } from '@/lib/characters'
 import { gtagEvent } from '@/lib/gtag'
+import { getDictionary, type Locale } from '@/lib/i18n'
 
 // この部品が受け取る props の型。interface で形を決めておくと、渡し忘れや型違いを TypeScript が教えてくれる
 interface Props {
+  lang: Locale
   character: Character
   characterId: CharacterId
   sex: Sex
   sharePath: string
 }
 
-export default function ShareCard({ character, characterId, sex, sharePath }: Props) {
+export default function ShareCard({ lang, character, characterId, sex, sharePath }: Props) {
+  const t = getDictionary(lang).share
   const imageSrc = `/characters/${characterId}_${sex}.png`
-  const genderText = getVariant(characterId, sex)
+  const genderText = getVariant(characterId, sex, lang)
   // useRef: 画面上のカード要素（<div ref={cardRef}>）をつかんでおく入れ物。値を変えても再描画は起きない。
   // 画像化するときに「どの要素を写すか」を html2canvas に渡すために使う
   const cardRef = useRef<HTMLDivElement>(null)
@@ -31,7 +34,8 @@ export default function ShareCard({ character, characterId, sex, sharePath }: Pr
   // シェアURLのドメイン（本番・プレビューで変わる）。window はブラウザにしかないので useEffect で取得する
   const [origin, setOrigin] = useState('')
   useEffect(() => setOrigin(window.location.origin), [])
-  const shareText = `VeloAvaでサイクリストタイプを診断したら「${genderText.name}」（${genderText.title}）だった！\nあなたは何タイプ？\n#VeloAva #ロードバイク`
+  // 投稿文は言語ごとに辞書で用意（ハッシュタグもその国でよく使われるものに）
+  const shareText = t.postText(genderText.name, genderText.title)
   // ユーザーのシェアから来た人を自分の宣伝ポストと分けて数えるため、シェアURLにUTMを付ける（着地時に layout.tsx が share_inflow を送る）
   const shareUrl = `${origin}${sharePath}?utm_source=x&utm_medium=social&utm_campaign=user_share`
   // X の投稿画面を開く URL。日本語や記号を URL に入れるので encodeURIComponent で変換する
@@ -63,7 +67,7 @@ export default function ShareCard({ character, characterId, sex, sharePath }: Pr
         const file = new File([blob], filename, { type: 'image/png' })
         gtagEvent('share_card', { method: 'share' })
         // 共有シートを開く。ユーザーが閉じると AbortError になるので、下の catch でエラー扱いしない
-        await navigator.share({ files: [file], title: 'VeloAva キャラクター診断' })
+        await navigator.share({ files: [file], title: t.shareTitle })
         return
       }
 
@@ -110,10 +114,11 @@ export default function ShareCard({ character, characterId, sex, sharePath }: Pr
             textDecoration: 'none',
           }}
         >
+          {t.postBeforeLogo}
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
           </svg>
-          でポスト
+          {t.postAfterLogo}
         </a>
         <button
           onClick={handleSave}
@@ -137,7 +142,7 @@ export default function ShareCard({ character, characterId, sex, sharePath }: Pr
             boxShadow: `0 4px 24px ${character.accentColor}55`,
           }}
         >
-          {saving ? '⏳ 処理中...' : isMobileDevice ? '📲 保存・シェア' : '💾 画像をダウンロード'}
+          {saving ? t.saving : isMobileDevice ? t.saveMobile : t.saveDesktop}
         </button>
       </div>
 

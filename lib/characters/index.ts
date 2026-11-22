@@ -4,6 +4,8 @@
 // `import ... from '@/lib/characters'` と書くと、フォルダの index.ts が読まれる
 
 import { CHARACTER_DATA } from './data'
+import { CHARACTER_TRANSLATIONS } from './translations'
+import type { Locale } from '../i18n/config'
 import { CHARACTER_IDS, type Character, type CharacterId, type CharacterVariant, type Sex } from './types'
 
 // export * で types.ts の型と定数をそのまま外に出す。使う側は '@/lib/characters' だけを import すればよい
@@ -16,15 +18,17 @@ export function isCharacterId(value: unknown): value is CharacterId {
   return typeof value === 'string' && (CHARACTER_IDS as readonly string[]).includes(value)
 }
 
-export function getCharacter(id: CharacterId): Character {
-  return CHARACTER_DATA[id]
+// 言語を指定すると、名前・説明などの文章だけその言語に差し替える（id・絵文字・色は共通）。翻訳がなければ日本語のまま
+export function getCharacter(id: CharacterId, locale: Locale = 'ja'): Character {
+  const text = locale === 'ja' ? undefined : CHARACTER_TRANSLATIONS[locale]?.[id]
+  return text ? { ...CHARACTER_DATA[id], ...text } : CHARACTER_DATA[id]
 }
 
-export function getVariant(id: CharacterId, sex: Sex): CharacterVariant {
-  return CHARACTER_DATA[id].variants[sex]
+export function getVariant(id: CharacterId, sex: Sex, locale: Locale = 'ja'): CharacterVariant {
+  return getCharacter(id, locale).variants[sex]
 }
 
 // map は配列の各要素を変換した新しい配列を返す。ID の並び順どおりにキャラを並べる
-export function listCharacters(): Character[] {
-  return CHARACTER_IDS.map((id) => CHARACTER_DATA[id])
+export function listCharacters(locale: Locale = 'ja'): Character[] {
+  return CHARACTER_IDS.map((id) => getCharacter(id, locale))
 }

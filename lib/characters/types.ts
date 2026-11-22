@@ -30,3 +30,6 @@ export interface Character {
   // Record<Sex, CharacterVariant> は { male: CharacterVariant; female: CharacterVariant } と同じ意味。両方そろっていないと型エラーになる
   variants: Record<Sex, CharacterVariant>
 }
+
+// 英語・ポルトガル語などの翻訳で差し替える部分（id・絵文字・色は全言語共通なので含めない）
+export type CharacterText = Pick<Character, 'typeName' | 'tagline' | 'strengths' | 'tips' | 'variants'>

@@ -1,6 +1,6 @@
 // キャラ別OGP画像（Xのカードに出る 1200x630）。next/og(satori)で描画するため inline style のみ
 // Next.js の決まりで、この名前のファイルを置くと同じフォルダのページの OGP 画像になり、
-// <meta property="og:image"> も自動で付く（URL は /c/climber_male/opengraph-image）。
+// <meta property="og:image"> も自動で付く（URL は /c/climber_male/opengraph-image、英語は /en/c/climber_male/opengraph-image）。
 // JSX を HTML ではなく PNG 画像に変換している。satori は CSS の一部しか対応せず、Tailwind も使えない。
 // 出てくる概念: ファイル規約、async 関数、Promise.all、サーバー専用の node:fs
 
@@ -9,32 +9,33 @@ import { join } from 'node:path'
 import { ImageResponse } from 'next/og'
 import type { CharacterVariant } from '@/lib/characters'
 import { getSharePageData } from '@/lib/share'
+import { getDictionary, isLocale } from '@/lib/i18n'
 
 // alt / size / contentType を export すると、Next.js が og:image の付属情報（説明・サイズ・形式）として使う
-export const alt = 'VeloAva サイクリストキャラクター診断'
+// alt は言語で変えられない（固定の値しか export できない）ため、言語に関係ない英語の表記にしている
+export const alt = 'VeloAva — Cyclist character diagnosis'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
-const OG_TEXT = {
-  lead: '私のサイクリストタイプは',
-  cta: 'あなたは何タイプ？',
-}
-
 // async 関数: 中で await を使って、画像ファイルの読み込みや通信の完了を待てる。戻り値は Promise になる
-export default async function Image({ params }: { params: { slug: string } }) {
+export default async function Image({ params }: { params: { slug: string; lang: string } }) {
+  const lang = isLocale(params.lang) ? params.lang : 'ja'
+  const og = getDictionary(lang).og // 「私のサイクリストタイプは」「あなたは何タイプ？」の各言語版
   // ?? は「左が null / undefined のときだけ右を使う」。存在しないキャラでも画像は返すため既定のキャラに倒している。
   // 末尾の ! は「ここは null にならない」と TypeScript に伝える印（実行時には何もしない）
-  const { characterId, sex, character, variant } = getSharePageData(params.slug) ?? getSharePageData('allrounder_male')!
+  const { characterId, sex, character, variant } = getSharePageData(params.slug, lang) ?? getSharePageData('allrounder_male', lang)!
 
   // Promise.all は複数の待ち処理を同時に始めて、全部終わるのを待つ。順番に await するより速い
   const [font, imageData] = await Promise.all([
-    loadJapaneseFont(`VeloAva${OG_TEXT.lead}${OG_TEXT.cta}${variant.title}${variant.name}${variant.catchphrase}`),
+    // 英語・ポルトガル語でも同じフォントで描く（Noto Sans JP はアルファベットやアクセント付き文字 ã ç é も含む）
+    loadJapaneseFont(`VeloAva${og.lead}${og.cta}${variant.title}${variant.name}${variant.catchphrase}`),
     // キャラ画像は next.config.mjs の outputFileTracingIncludes で関数にバンドルしている
     readFile(join(process.cwd(), 'public', 'characters', `${characterId}_${sex}.png`)),
   ])
 
   return new ImageResponse(
     <OgImageLayout
+      text={og}
       variant={variant}
       accentColor={character.accentColor}
       imageSrc={`data:image/png;base64,${imageData.toString('base64')}`}
@@ -64,10 +65,12 @@ async function loadJapaneseFont(text: string): Promise<ArrayBuffer | null> {
 
 // 画像のレイアウト。見た目は普通の JSX だが、satori は display: flex の指定が必要など制約がある
 function OgImageLayout({
+  text,
   variant,
   accentColor,
   imageSrc,
 }: {
+  text: { lead: string; cta: string }
   variant: CharacterVariant
   accentColor: string
   imageSrc: string
@@ -98,7 +101,7 @@ function OgImageLayout({
         }}
       >
         <div style={{ fontSize: 26, letterSpacing: 6, color: 'rgba(255,255,255,0.4)', marginBottom: 28 }}>VeloAva</div>
-        <div style={{ fontSize: 26, color: 'rgba(255,255,255,0.7)', marginBottom: 16 }}>{OG_TEXT.lead}</div>
+        <div style={{ fontSize: 26, color: 'rgba(255,255,255,0.7)', marginBottom: 16 }}>{text.lead}</div>
         <div
           style={{
             display: 'flex',
@@ -127,7 +130,7 @@ function OgImageLayout({
             padding: '12px 28px',
           }}
         >
-          {OG_TEXT.cta}
+          {text.cta}
         </div>
       </div>
     </div>
