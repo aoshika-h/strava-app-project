@@ -173,7 +173,7 @@ export const en: Record<CharacterId, CharacterText> = {
         lore: 'Got hooked on cycling while riding off work stress. The post-ride meal is his biggest reward.',
       },
       female: {
-        name: 'Freedom Sunny',
+        name: 'Freedom Soleil',
         title: 'Free as the Wind',
         catchphrase: '"With a bike, every day is a little special."',
         specialMove: '⚔️ Happy Ride',

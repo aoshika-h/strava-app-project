@@ -195,7 +195,7 @@ export const CHARACTER_DATA: Record<CharacterId, Character> = {
         lore: '仕事のストレスを走って発散するうちに自転車にハマった。ライド後のご飯が最大の楽しみ。',
       },
       female: {
-        name: 'フリーダム・サニー',
+        name: 'フリーダム・ソレイユ',
         title: '風まかせの自由人',
         catchphrase: '「自転車があれば、毎日がちょっと特別」',
         specialMove: '⚔️ ハッピー・ライド',

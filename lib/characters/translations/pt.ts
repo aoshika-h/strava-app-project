@@ -173,7 +173,7 @@ export const pt: Record<CharacterId, CharacterText> = {
         lore: 'Viciou na bike pedalando para aliviar o estresse do trabalho. A comida pós-pedal é a maior recompensa.',
       },
       female: {
-        name: 'Freedom Sunny',
+        name: 'Freedom Soleil',
         title: 'Livre como o Vento',
         catchphrase: '"Com uma bike, todo dia fica um pouco especial."',
         specialMove: '⚔️ Pedal Feliz',
