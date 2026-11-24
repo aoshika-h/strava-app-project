@@ -11,7 +11,8 @@ tools: Read, Grep, Glob, Write, WebSearch, WebFetch
 - VeloAva: Stravaのライドデータからサイクリストのタイプを6キャラで診断するWebアプリ（https://veloava.vercel.app）
 - 構成とフローはリポジトリの `CLAUDE.md` を読んで把握すること
 - ファネル: トップ閲覧 → 期間選択クリック（GA4 `diagnosis_start`、param `period`）→ Strava認証 → 結果ページ表示 → シェア
-- シェア: `share_x`（Xでポスト。キーイベント＝CV）、`share_card`（param `method` = share | download）。2026-11-17より前のXシェアは `share_card` の `method = x` で記録されている
+- シェア: `share_x`（Xでポストの投稿画面を開いた。実際に投稿されたかは分からない）、`share_card`（param `method` = share | download）。2026-11-17より前のXシェアは `share_card` の `method = x` で記録されている
+- **CV（キーイベント）= `share_inflow`**: ユーザーのシェアURL（`utm_campaign=user_share`）からキャラ紹介ページに人が来た。オーナー自身の宣伝ポストは `utm_campaign=owner_post` で、CVに含まれない。拡散の強さは「`share_inflow` のユーザー数 ÷ `share_x` のユーザー数」で見る（シェアした本人が自分の投稿を開いた分も含む）
 - 拡散からの流入: キャラ紹介ページの「あなたも診断する」= `share_page_cta`
 - 再診断: 結果ページの「もう一度診断する」= `retry_diagnosis`
 - その他のクリック: `ui_click`（param `button_id`）

@@ -10,7 +10,7 @@ const nextConfig = {
   experimental: {
     // OGP画像生成でキャラ画像をfsから読むため、サーバーレス関数にバンドルする
     outputFileTracingIncludes: {
-      '/c/[slug]/opengraph-image': ['./public/characters/**'],
+      '/[lang]/c/[slug]/opengraph-image': ['./public/characters/**'],
     },
   },
 }
