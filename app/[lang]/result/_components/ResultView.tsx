@@ -86,7 +86,7 @@ export default function ResultView({
 
         {/* ライド統計 */}
         <div>
-          <h2 className="text-sm font-bold text-white/40 tracking-widest uppercase mb-3">Battle Records</h2>
+          <h2 className="text-sm font-bold text-white/55 tracking-widest uppercase mb-3">Battle Records</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {[
               // カードの中身を配列で組み立ててから .map で並べる。...（スプレッド構文）で、条件によって
@@ -107,7 +107,7 @@ export default function ResultView({
               <div key={item.label} className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
                 <div className="text-2xl mb-1">{item.icon}</div>
                 <div className="font-bold text-base">{item.value}</div>
-                <div className="text-xs text-white/35 mt-0.5">{item.label}</div>
+                <div className="text-xs text-white/55 mt-0.5">{item.label}</div>
               </div>
             ))}
           </div>
@@ -115,7 +115,7 @@ export default function ResultView({
 
         {/* 能力チャート。左がレーダーチャート、右が数値のバー（バーの幅を style の width: % で指定） */}
         <div>
-          <h2 className="text-sm font-bold text-white/40 tracking-widest uppercase mb-3">Ability Chart</h2>
+          <h2 className="text-sm font-bold text-white/55 tracking-widest uppercase mb-3">Ability Chart</h2>
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
             <div className="md:flex items-center gap-6">
               <div className="flex-shrink-0 mb-4 md:mb-0">
@@ -145,7 +145,7 @@ export default function ResultView({
 
         {/* 強み */}
         <div>
-          <h2 className="text-sm font-bold text-white/40 tracking-widest uppercase mb-3">Strengths</h2>
+          <h2 className="text-sm font-bold text-white/55 tracking-widest uppercase mb-3">Strengths</h2>
           <div className="flex flex-wrap gap-2">
             {character.strengths.map((s) => (
               <span
@@ -165,7 +165,7 @@ export default function ResultView({
 
         {/* トレーニングアドバイス */}
         <div>
-          <h2 className="text-sm font-bold text-white/40 tracking-widest uppercase mb-3">Level Up</h2>
+          <h2 className="text-sm font-bold text-white/55 tracking-widest uppercase mb-3">Level Up</h2>
           <div className="space-y-3">
             {character.tips.map((tip, i) => (
               <div key={i} className="flex gap-3 bg-white/5 border border-white/10 rounded-xl p-4">

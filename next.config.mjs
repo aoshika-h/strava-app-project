@@ -3,8 +3,28 @@
 // - Referrer-Policy: 外部サイトへ移るときは、URL全体ではなくドメインだけを伝える（結果ページの ?data= を外に出さない）
 // - X-Frame-Options / frame-ancestors: 他のサイトに iframe で埋め込ませない（クリックジャッキング対策）
 // - Permissions-Policy: 使わない機能（カメラ・マイク・位置情報など）を無効にしておく
-// HTTPS の強制（HSTS）は Vercel が自動で付ける。CSP（読み込めるスクリプトの制限）は GA の読み込みと両立させる調整が要るので、まだ入れていない
+// HTTPS の強制（HSTS）は Vercel が自動で付ける
+//
+// CSP（読み込んでよい場所の制限）は、まず Report-Only（違反してもブロックせず /api/csp-report に報告だけ）で入れている。
+// Vercel のログの [csp-report] を見て、正しい読み込み（GA・画像・シェアカードの保存など）が引っかかっていなければ、
+// キーを Content-Security-Policy に変えて本当にブロックする。外部から読み込むのは GA（googletagmanager・google-analytics）だけ。
+// script の 'unsafe-inline' は、Next.js と GA の初期化がページ内のスクリプトを使うため（なくすには nonce 方式への作り替えが要る）
+const csp = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://*.google-analytics.com https://*.googletagmanager.com",
+  "font-src 'self' data:",
+  "connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "object-src 'none'",
+  'report-uri /api/csp-report',
+].join('; ')
+
 const securityHeaders = [
+  { key: 'Content-Security-Policy-Report-Only', value: csp },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   { key: 'X-Frame-Options', value: 'DENY' },

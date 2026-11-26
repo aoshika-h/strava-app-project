@@ -10,7 +10,8 @@ import DiagnosisStarter from './_components/DiagnosisStarter'
 import LatestUpdate from './_components/LatestUpdate'
 import { listCharacters } from '@/lib/characters'
 import { getChangelog, type ChangelogEntry } from '@/lib/changelog'
-import { getDictionary, localePath, type Locale } from '@/lib/i18n'
+import { getDictionary, isLocale, localePath, type Locale } from '@/lib/i18n'
+import { notFound } from 'next/navigation'
 import { pageAlternates } from '@/lib/seo'
 import type { Metadata } from 'next'
 
@@ -19,8 +20,8 @@ function ChangelogList({ entries, formatDate }: { entries: ChangelogEntry[]; for
   return (
     <ul className="space-y-2">
       {entries.map((entry) => (
-        <li key={entry.date + entry.text} className="flex gap-3 text-white/40 leading-relaxed">
-          <span className="flex-shrink-0 w-10 text-white/30">{formatDate(entry.date)}</span>
+        <li key={entry.date + entry.text} className="flex gap-3 text-white/55 leading-relaxed">
+          <span className="flex-shrink-0 w-10 text-white/55">{formatDate(entry.date)}</span>
           <span>{entry.text}</span>
         </li>
       ))}
@@ -34,10 +35,11 @@ export function generateMetadata({ params }: { params: { lang: string } }): Meta
 }
 
 // ページの部品（page.tsx の default export）は、URL の動的セグメント（[lang]）を params、クエリ（?error=...）を searchParams として受け取れる
-// params.lang は layout.tsx で正しい言語か確かめ済みなので、as Locale で型だけ付けている
 // Strava 認証に失敗すると /api/auth/callback が /?error=access_denied（英語なら /en?error=...）のようにここへ戻す
 export default function HomePage({ params, searchParams }: { params: { lang: string }; searchParams: { error?: string } }) {
-  const lang = params.lang as Locale
+  // 知らない言語（/fr など）は layout でも 404 にするが、ページ側も先に確かめる（確かめないと辞書が見つからずサーバーログにエラーが出る）
+  if (!isLocale(params.lang)) notFound()
+  const lang = params.lang
   const t = getDictionary(lang)
   const changelog = getChangelog(lang)
   const errorMsg = searchParams.error ? t.home.errors[searchParams.error] : null
@@ -107,7 +109,7 @@ export default function HomePage({ params, searchParams }: { params: { lang: str
               </li>
             ))}
           </ul>
-          <Link href={localePath(lang, '/privacy')} data-ga-event="ui_click" data-ga-id="trust_privacy_link" className="mt-3 inline-block py-1.5 text-xs text-white/40 underline underline-offset-2 hover:text-white/70">
+          <Link href={localePath(lang, '/privacy')} data-ga-event="ui_click" data-ga-id="trust_privacy_link" className="mt-3 inline-block py-1.5 text-xs text-white/55 underline underline-offset-2 hover:text-white/70">
             {t.home.readPrivacy}
           </Link>
         </div>
@@ -162,21 +164,21 @@ export default function HomePage({ params, searchParams }: { params: { lang: str
             >
               <div className="text-3xl mb-4">{item.icon}</div>
               <h3 className="font-bold mb-2">{item.title}</h3>
-              <p className="text-sm text-white/50">{item.desc}</p>
+              <p className="text-sm text-white/55">{item.desc}</p>
             </div>
           ))}
         </div>
       </div>
 
       {/* フッター */}
-      <footer className="border-t border-white/5 py-6 text-center text-xs text-white/20">
+      <footer className="border-t border-white/5 py-6 text-center text-xs text-white/55">
         {/* 更新履歴（ファーストビューの「NEW」からここへ飛ぶ） */}
         <section id="changelog" className="max-w-xl mx-auto px-6 mb-6 text-left scroll-mt-6">
-          <h2 className="text-sm font-bold text-white/50 mb-3">{t.home.changelogTitle}</h2>
+          <h2 className="text-sm font-bold text-white/55 mb-3">{t.home.changelogTitle}</h2>
           <ChangelogList entries={changelog.slice(0, 3)} formatDate={t.formatShortDate} />
           {changelog.length > 3 && (
             <details className="mt-2 group">
-              <summary className="cursor-pointer list-none text-white/40 hover:text-white/60 underline underline-offset-2 group-open:hidden">
+              <summary className="cursor-pointer list-none text-white/55 hover:text-white/60 underline underline-offset-2 group-open:hidden">
                 {t.home.showAll(changelog.length)}
               </summary>
               <div className="mt-2">
@@ -186,7 +188,7 @@ export default function HomePage({ params, searchParams }: { params: { lang: str
           )}
         </section>
         <p>{t.home.footerNote}</p>
-        <Link href={localePath(lang, '/privacy')} data-ga-event="ui_click" data-ga-id="privacy_link" className="mt-1 inline-block py-1.5 hover:text-white/40 transition-colors underline underline-offset-2">
+        <Link href={localePath(lang, '/privacy')} data-ga-event="ui_click" data-ga-id="privacy_link" className="mt-1 inline-block py-1.5 hover:text-white/80 transition-colors underline underline-offset-2">
           {t.home.privacy}
         </Link>
       </footer>

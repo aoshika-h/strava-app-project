@@ -64,6 +64,7 @@ app/
 ├── sitemap.ts / robots.ts / manifest.ts  /sitemap.xml・/robots.txt・/manifest.webmanifest
 └── api/auth/{strava,callback}/route.ts  Strava OAuth の開始・コールバック
 └── api/share/x/route.ts      「Xでポスト」の中継（X の投稿画面へ転送）
+└── api/csp-report/route.ts   CSP の違反レポートの受け口（Report-Only の報告先）
 components/                   ClickTracker, LanguageSwitcher
 lib/
 ├── i18n/                     言語の設定（config.ts）と画面文言の辞書（dictionaries/{ja,en,pt}.ts）
@@ -171,10 +172,10 @@ Strava API Policy 5.3条により、Strava Data（APIで取得した全データ
 
 - **canonical と別言語版（hreflang）**: ページごとに `generateMetadata` で `lib/seo.ts` の `pageAlternates(lang, path)` を指定する（トップ・プライバシー・キャラ紹介）。layout で固定しない（固定すると全ページの別言語版がトップになる）。キャラ紹介ページの canonical は UTM なしの正規URL
 - **アイコン**: `public/favicon.ico`・`icon.svg`・`apple-touch-icon.png`・`icon-192.png`・`icon-512.png`（`node scripts/generate-icons.cjs` で作る）と `app/manifest.ts`。`layout.tsx` の `viewport` でテーマ色（`#0A0A0F`）とダーク配色を指定
-- **セキュリティヘッダー**: `next.config.mjs` で全レスポンスに nosniff・Referrer-Policy・X-Frame-Options/frame-ancestors・Permissions-Policy を付け、`X-Powered-By` を消す。HSTS は Vercel が付ける。CSP（スクリプトの読み込み制限）は GA との両立の調整が要るので未導入
-- **404**: `app/[lang]/not-found.tsx` がサイトのデザイン・3言語で出す。存在しないURLは `[...rest]/page.tsx` が `notFound()` を呼ぶ。not-found で `headers()` などサーバーの動的な値を使うと、`[lang]` 配下のページが静的に作られなくなる（プライバシーのCDNキャッシュが効かなくなる）ので使わない
+- **セキュリティヘッダー**: `next.config.mjs` で全レスポンスに nosniff・Referrer-Policy・X-Frame-Options/frame-ancestors・Permissions-Policy を付け、`X-Powered-By` を消す。HSTS は Vercel が付ける。CSP は **Report-Only**（違反してもブロックせず `/api/csp-report` に報告し、Vercel のログに `[csp-report]` として出る。URL のクエリは消してから記録）。外部から読むのは GA だけ。ログで正しい読み込みが引っかかっていないことを確かめたら、`next.config.mjs` のキーを `Content-Security-Policy` に変えて本当にブロックする。外部の読み込み（画像・スクリプト・通信先）を足すときは CSP にも足す
+- **404**: `app/[lang]/not-found.tsx` がサイトのデザイン・3言語で出す（Next.js 14 の仕様で、404の画面はブラウザ側で描かれる。サーバーが返す最初のHTMLは中身が空だが、404 ステータスと noindex は付く）。存在しないURLは `[...rest]/page.tsx` が `notFound()` を呼ぶ。not-found で `headers()` などサーバーの動的な値を使うと、`[lang]` 配下のページが静的に作られなくなる（プライバシーのCDNキャッシュが効かなくなる）ので使わない
 - **見出し**: 各ページの `h1` は1つ（結果ページはシェアカードのキャラ名）。**構造化データ**: トップに JSON-LD（`WebApplication`）
-- **画像**: `next/image` の `fill` には `sizes` を付ける（付けないと画面幅いっぱいの大きな画像を読む）。**タップ領域**: ボタン・リンクは 24px 以上（WCAG 2.2）。文中のリンクは対象外
+- **画像**: `next/image` の `fill` には `sizes` を付ける（付けないと画面幅いっぱいの大きな画像を読む）。**タップ領域**: ボタン・リンクは 24px 以上（WCAG 2.2）。文中のリンクは対象外。**文字のコントラスト**: 暗い背景の白文字は不透明度 55% 以上（`text-white/55` 以上、背景に対して約6:1。WCAG AA は 4.5:1）。`/50` 未満の薄さは使わない。ロゴ（`data-logo`）は対象外
 - 上の項目は `check-app` の「Web の基本」で確かめている
 
 ### GA4 計測

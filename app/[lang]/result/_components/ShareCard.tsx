@@ -251,7 +251,8 @@ export default function ShareCard({ lang, character, characterId, sex }: Props) 
           </div>
           <div style={{
             fontSize: '10px',
-            color: 'rgba(255,255,255,0.35)',
+            // 文字のコントラストは WCAG AA（4.5:1）以上にする（0.55 で約6:1）
+            color: 'rgba(255,255,255,0.55)',
             lineHeight: 1.6,
             textAlign: 'left',
             borderTop: '1px solid rgba(255,255,255,0.08)',
@@ -261,8 +262,8 @@ export default function ShareCard({ lang, character, characterId, sex }: Props) 
             📖 {genderText.lore}
           </div>
 
-          {/* フッター: VeloAvaロゴ */}
-          <div style={{
+          {/* フッター: VeloAvaロゴ（ロゴはコントラストの基準の対象外なので、控えめな薄さのまま。check-app も data-logo を除外する） */}
+          <div data-logo style={{
             fontSize: '11px',
             color: 'rgba(255,255,255,0.2)',
             letterSpacing: '3px',

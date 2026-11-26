@@ -145,6 +145,18 @@ async function checkPages(browser) {
           .map(({ t, r }) => `${t}(${Math.round(r.width)}x${Math.round(r.height)})`),
       )
       check(`スマホ幅 ${p}: ボタン・リンクが 24px 以上`, small.length === 0, small.join(', '))
+      // 文字のコントラスト（WCAG AA 4.5:1）。暗い背景に白を薄くして載せている文字が、薄すぎないか（白の不透明度 0.5 未満を薄すぎとみなす）。
+      // 透明な文字（グラデーション文字）・ロゴ（data-logo）は対象外
+      const faint = await mobile.page.evaluate(() =>
+        Array.from(document.querySelectorAll('body *'))
+          .filter((e) => !e.closest('[data-logo]') && Array.from(e.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim()))
+          .filter((e) => {
+            const m = getComputedStyle(e).color.match(/^rgba\((\d+), (\d+), (\d+), ([\d.]+)\)$/)
+            return m && +m[1] > 200 && +m[2] > 200 && +m[3] > 200 && +m[4] > 0 && +m[4] < 0.5
+          })
+          .map((e) => `${e.textContent.trim().slice(0, 15)}(${getComputedStyle(e).color})`),
+      )
+      check(`スマホ幅 ${p}: 薄すぎる文字がない（コントラスト 4.5:1 以上）`, faint.length === 0, faint.slice(0, 8).join(', '))
     }
   }
   await mobile.context.close()
@@ -330,9 +342,13 @@ async function checkWebBasics(browser) {
   for (const url of ['/', '/en/c/climber_male', '/api/share/x?c=climber_male', '/og/ja.png']) {
     const res = await fetch(BASE + url, { redirect: 'manual' })
     const h = (k) => res.headers.get(k) ?? ''
-    const ok = h('x-content-type-options') === 'nosniff' && h('referrer-policy') === 'strict-origin-when-cross-origin' && h('x-frame-options') === 'DENY' && h('content-security-policy').includes("frame-ancestors 'none'") && h('permissions-policy').includes('camera=()') && !res.headers.has('x-powered-by')
+    const ok = h('content-security-policy-report-only').includes("default-src 'self'") && h('x-content-type-options') === 'nosniff' && h('referrer-policy') === 'strict-origin-when-cross-origin' && h('x-frame-options') === 'DENY' && h('content-security-policy').includes("frame-ancestors 'none'") && h('permissions-policy').includes('camera=()') && !res.headers.has('x-powered-by')
     check(`セキュリティヘッダー ${url}`, ok, JSON.stringify(Object.fromEntries(res.headers)))
   }
+
+  // CSP の違反レポートの受け口（Report-Only の報告先）。結果ページの URL が来てもログに data を出さない（ログはここでは見られないので、受け付けることだけ確かめる）
+  const rep = await fetch(BASE + '/api/csp-report', { method: 'POST', headers: { 'content-type': 'application/csp-report' }, body: JSON.stringify({ 'csp-report': { 'document-uri': `${BASE}/result?data=secret`, 'violated-directive': 'img-src', 'blocked-uri': 'https://evil.example/x.png' } }) })
+  check('CSP の違反レポートを受け付ける（204）', rep.status === 204, String(rep.status))
 
   // canonical と別言語版（hreflang）がページごとに正しいか
   const link = (html, rel, extra = '') => html.match(new RegExp(`<link rel="${rel}"${extra} href="([^"]*)"`))?.[1] ?? ''

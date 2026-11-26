@@ -80,12 +80,12 @@ export default function PeriodButtons({ lang, predicted, includePrivate }: { lan
 
             <div>
               <p className="text-white font-bold text-lg mb-1">{t.loading.title}</p>
-              <p className="text-white/40 text-sm">{t.loading.body1}<br />{t.loading.body2}</p>
+              <p className="text-white/55 text-sm">{t.loading.body1}<br />{t.loading.body2}</p>
             </div>
 
             {/* 選択期間の表示 */}
             <div className="bg-white/5 border border-white/10 rounded-xl px-5 py-2.5 text-sm">
-              <span className="text-white/40">{t.loading.period}</span>
+              <span className="text-white/55">{t.loading.period}</span>
               <span className="text-white font-bold ml-1">
                 {t.periods[loading]}
               </span>

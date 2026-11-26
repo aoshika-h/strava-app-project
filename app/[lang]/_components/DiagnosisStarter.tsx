@@ -60,7 +60,7 @@ export default function DiagnosisStarter({ lang }: { lang: Locale }) {
         type="button"
         onClick={() => setPredicted('unknown')}
         aria-pressed={predicted === 'unknown'}
-        className={`py-1.5 text-xs underline underline-offset-2 ${predicted === 'unknown' ? 'text-white' : 'text-white/40 hover:text-white/70'}`}
+        className={`py-1.5 text-xs underline underline-offset-2 ${predicted === 'unknown' ? 'text-white' : 'text-white/55 hover:text-white/70'}`}
       >
         {t.unknown}
       </button>
@@ -69,7 +69,7 @@ export default function DiagnosisStarter({ lang }: { lang: Locale }) {
         <div className="flex flex-col items-center gap-3 mt-4">
           <p className="text-base font-bold text-white/80">{t.step2}</p>
           {picked && (
-            <p className="text-xs text-white/50">
+            <p className="text-xs text-white/55">
               {t.yourGuess}<span className="font-bold" style={{ color: picked.accentColor }}>{picked.typeName}</span>
             </p>
           )}
@@ -84,7 +84,7 @@ export default function DiagnosisStarter({ lang }: { lang: Locale }) {
             />
             <span>
               {t.includePrivate}
-              <span className="block text-white/40">{t.includePrivateNote}</span>
+              <span className="block text-white/55">{t.includePrivateNote}</span>
             </span>
           </label>
           <PeriodButtons lang={lang} predicted={predicted} includePrivate={includePrivate} />

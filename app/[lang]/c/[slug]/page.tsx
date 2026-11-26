@@ -45,7 +45,7 @@ export default function SharePage({ params }: PageProps) {
   return (
     <main className="min-h-screen bg-[#0A0A0F] text-white flex items-center justify-center px-6 py-16">
       <div className="max-w-sm w-full text-center">
-        <p className="text-xs tracking-[0.3em] text-white/40 mb-6">VeloAva</p>
+        <p className="text-xs tracking-[0.3em] text-white/55 mb-6">VeloAva</p>
         <div className="relative rounded-3xl overflow-hidden mb-6">
           <div
             className="absolute inset-0 opacity-40"
@@ -72,7 +72,7 @@ export default function SharePage({ params }: PageProps) {
         >
           {t.cta}
         </Link>
-        <p className="mt-4 text-xs text-white/30">{t.note}</p>
+        <p className="mt-4 text-xs text-white/55">{t.note}</p>
       </div>
     </main>
   )

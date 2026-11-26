@@ -9,7 +9,7 @@ export default function ResultErrorView({ lang, status }: { lang: Locale; status
   return (
     <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center text-center p-6">
       <div>
-        <p className="text-white/50 mb-4">
+        <p className="text-white/55 mb-4">
           {status === 'missing' ? t.errorMissing : t.errorInvalid}
         </p>
         {/* 結果ページからは通常の <a> で移る（ResultView の「もう一度診断する」と同じ理由） */}

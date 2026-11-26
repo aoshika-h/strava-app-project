@@ -48,9 +48,9 @@ export default function PrivacyJa() {
 
       {/* ===== English Summary ===== */}
       <div className="mt-14 pt-10 border-t border-white/10">
-        <p className="text-xs text-white/30 mb-6 tracking-widest uppercase">English Summary</p>
+        <p className="text-xs text-white/55 mb-6 tracking-widest uppercase">English Summary</p>
 
-        <div className="space-y-6 text-sm text-white/50 leading-relaxed">
+        <div className="space-y-6 text-sm text-white/55 leading-relaxed">
           <div>
             <h3 className="text-white/70 font-bold mb-1">Data Collection</h3>
             <p>VeloAva accesses your Strava athlete profile (name, gender) and activity data (distance, speed, elevation, power) via the official Strava API. A temporary access token is used only during the analysis process, and VeloAva revokes its access to your Strava account right after the diagnosis. We also collect anonymous usage events via Google Analytics 4.</p>
@@ -65,7 +65,7 @@ export default function PrivacyJa() {
           </div>
           <div>
             <h3 className="text-white/70 font-bold mb-1">Strava API Usage</h3>
-            <p>This application uses read-only Strava API access (<code className="text-white/40">read, activity:read</code>). Activities you set to “Only You” are read only if you choose to include them before the diagnosis (<code className="text-white/40">activity:read_all</code>). We do not write, modify, or delete any data on Strava.</p>
+            <p>This application uses read-only Strava API access (<code className="text-white/55">read, activity:read</code>). Activities you set to “Only You” are read only if you choose to include them before the diagnosis (<code className="text-white/55">activity:read_all</code>). We do not write, modify, or delete any data on Strava.</p>
           </div>
           <div>
             <h3 className="text-white/70 font-bold mb-1">Contact</h3>

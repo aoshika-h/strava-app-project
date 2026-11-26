@@ -5,7 +5,7 @@ export default function InsightsCard({ insights, accentColor }: { insights: stri
   if (insights.length === 0) return null
   return (
     <div>
-      <h2 className="text-sm font-bold text-white/40 tracking-widest uppercase mb-3">Ride Insights</h2>
+      <h2 className="text-sm font-bold text-white/55 tracking-widest uppercase mb-3">Ride Insights</h2>
       <ul className="space-y-2">
         {insights.map((text) => (
           <li

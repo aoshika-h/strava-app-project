@@ -31,9 +31,9 @@ export default function PrivacyPage({ params }: { params: { lang: string } }) {
 
         {/* ヘッダー */}
         <div className="mb-10">
-          <Link href={localePath(lang, '/')} data-ga-event="ui_click" data-ga-id="privacy_back_top" className="inline-block py-1.5 text-xs text-white/30 hover:text-white/60 transition-colors">{t.backTop}</Link>
+          <Link href={localePath(lang, '/')} data-ga-event="ui_click" data-ga-id="privacy_back_top" className="inline-block py-1.5 text-xs text-white/55 hover:text-white/60 transition-colors">{t.backTop}</Link>
           <h1 className="text-2xl font-black mt-4 mb-1">{t.title}</h1>
-          <p className="text-xs text-white/30">{t.updated}</p>
+          <p className="text-xs text-white/55">{t.updated}</p>
         </div>
 
         <Content />

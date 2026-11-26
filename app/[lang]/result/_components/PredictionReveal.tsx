@@ -15,12 +15,12 @@ export default function PredictionReveal({ lang, predicted, actual }: { lang: Lo
     <div className="bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-center">
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         <div>
-          <div className="text-xs text-white/40">{t.yourGuess}</div>
+          <div className="text-xs text-white/55">{t.yourGuess}</div>
           <div className="text-sm font-bold" style={{ color: p.accentColor }}>{p.typeName}</div>
         </div>
-        <div className="text-white/30">→</div>
+        <div className="text-white/55">→</div>
         <div>
-          <div className="text-xs text-white/40">{t.result}</div>
+          <div className="text-xs text-white/55">{t.result}</div>
           <div className="text-sm font-bold" style={{ color: a.accentColor }}>{a.typeName}</div>
         </div>
       </div>

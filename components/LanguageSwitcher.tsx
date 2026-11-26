@@ -40,7 +40,7 @@ export default function LanguageSwitcher({ current }: { current: Locale }) {
               e.currentTarget.href = localePath(locale, path) + window.location.search
             }}
             className={`px-2 py-1 rounded-md border transition-colors ${
-              active ? 'border-white/30 text-white' : 'border-transparent text-white/40 hover:text-white/80'
+              active ? 'border-white/30 text-white' : 'border-transparent text-white/55 hover:text-white/80'
             }`}
           >
             {getDictionary(locale).langName}
