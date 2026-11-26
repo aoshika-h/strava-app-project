@@ -2,7 +2,6 @@
 // 学べること: props の型を 'missing' | 'invalid' のように決まった文字列だけに絞る（ユニオン型）、三項演算子での出し分け
 // state もブラウザ専用の処理もないので 'use client' は不要（サーバーで描画されるサーバーコンポーネント）
 
-import Link from 'next/link'
 import { getDictionary, localePath, type Locale } from '@/lib/i18n'
 
 export default function ResultErrorView({ lang, status }: { lang: Locale; status: 'missing' | 'invalid' }) {
@@ -13,9 +12,10 @@ export default function ResultErrorView({ lang, status }: { lang: Locale; status
         <p className="text-white/50 mb-4">
           {status === 'missing' ? t.errorMissing : t.errorInvalid}
         </p>
-        <Link href={localePath(lang, '/')} data-ga-event="ui_click" data-ga-id="error_back_to_top" className="text-orange-400 hover:underline">
+        {/* 結果ページからは通常の <a> で移る（ResultView の「もう一度診断する」と同じ理由） */}
+        <a href={localePath(lang, '/')} data-ga-event="ui_click" data-ga-id="error_back_to_top" className="text-orange-400 hover:underline">
           {status === 'missing' ? t.backToTop : t.tryAgain}
-        </Link>
+        </a>
       </div>
     </div>
   )

@@ -5,7 +5,6 @@
 // 'use client': 前回結果の読み書き（localStorage）や state を使うため、ブラウザで動かす必要がある
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 import type { AnalysisResult } from '@/lib/analysis'
 import { getCharacter, type CharacterId } from '@/lib/characters'
 import { loadLastResult, saveLastResult, type StoredResult } from '@/lib/result-history'
@@ -187,13 +186,15 @@ export default function ResultView({
 
         {/* もう一度診断 */}
         <div className="text-center pt-2">
-          <Link
+          {/* next/link ではなく通常の <a> にして、ページを読み込み直す。結果ページのURL（?data=）はGAの初期化で消しているが、
+              Link でページを読み込み直さずに移ると、GAの自動のページビューに前のURL（data 入り）が載るおそれがあるため */}
+          <a
             data-ga-event="retry_diagnosis"
             href={localePath(lang, '/')}
             className="inline-flex items-center gap-2 bg-white/8 hover:bg-white/12 border border-white/10 text-white/70 hover:text-white font-medium px-8 py-3 rounded-xl transition-colors text-sm"
           >
             {t.result.retry}
-          </Link>
+          </a>
         </div>
       </div>
     </main>

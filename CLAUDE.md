@@ -180,7 +180,7 @@ Strava認証ではXやLINEのアプリ内ブラウザからStravaアプリ・Saf
 
 **シェアURLのUTM**: 結果ページのXシェアは `/c/{characterId}_{sex}?utm_source=x&utm_medium=social&utm_campaign=user_share` を投稿する。`utm_campaign=user_share` で着地した人だけを `share_inflow`（CV）として数え、実際に投稿されて誰かが見たことの裏付けにする。開発者が自分で宣伝するポストには `utm_campaign=owner_post` を付け、ユーザーのシェアと混ぜない。ファネルは 結果ページ → `share_x` → `share_inflow` → `share_page_cta`。
 
-**GAに送るURL**: 結果ページのURLには診断結果（`?data=`、名前やライドの数値を含む）が入るため、初期化スクリプトで `page_location`・`page_referrer` から `data` と `cid` を消してから `config` する（そのままだとページビューにURL全体が載り、Strava由来のデータをGAに送ってしまう）。2026-11-26 まではURL全体を送っていた。
+**GAに送るURL**: 結果ページのURLには診断結果（`?data=`、名前やライドの数値を含む）が入るため、初期化スクリプトで `page_location`・`page_referrer` から `data` と `cid` を消してから `config` する（そのままだとページビューにURL全体が載り、Strava由来のデータをGAに送ってしまう）。2026-11-26 まではURL全体を送っていた。消すものがないページでは `page_location` を指定しない（指定するとそのページの後のイベントにも同じ値が使われるため）。結果ページから出るリンクは `next/link` ではなく通常の `<a>` にしてページを読み込み直す（読み込み直さないと初期化スクリプトが動かず、GAの自動ページビューに `data` 入りのURLが載るおそれがある）。
 
 ユーザープロパティ `predicted_type`（ユーザー単位のカスタムディメンション）には、診断前にユーザーが選んだ予想タイプ（6キャラのID または `unknown`）を送る。ユーザー自身の入力なのでStrava由来ではない。
 

@@ -185,11 +185,18 @@ async function checkRealResult(browser) {
   await page.waitForTimeout(300)
   check('結果（?data=）: 「Xでポスト」で share_x', !!findEvent(pushes, 'share_x'), show(pushes))
 
-  // 結果ページからトップへ戻ったときの referrer にも data を載せない（同じサイト内の移動はリファラーに URL 全体が入るため）
-  await page.goto(BASE + '/', { waitUntil: 'networkidle', referer: `${BASE}/result?data=${data}` })
+  // 結果ページから「もう一度診断する」でトップへ戻る。ページを読み込み直して初期化が動き直し（config がもう1回呼ばれ）、
+  // 前のページ（referrer）として GA に送る URL から data が消えていること。
+  // next/link で読み込み直さずに移ると、GA の自動のページビューに data 入りの URL が載るおそれがある
+  const configsBefore = pushes.filter((p) => p[0] === 'config').length
+  await Promise.all([page.waitForURL(BASE + '/', { timeout: 15000 }), page.click('[data-ga-event="retry_diagnosis"]')])
+  await page.waitForLoadState('networkidle')
   await page.waitForTimeout(300)
-  const topCfg = pushes.filter((p) => p[0] === 'config' && p[1] === GA_ID).pop()
-  check('トップ（結果ページから来た）: page_referrer に data を含めない', !/[?&]data=/.test(topCfg?.[2]?.page_referrer ?? ''), topCfg?.[2]?.page_referrer)
+  const configs = pushes.filter((p) => p[0] === 'config' && p[1] === GA_ID)
+  check('結果→「もう一度診断する」: ページを読み込み直して GA を初期化し直す', configs.length > configsBefore, show(pushes))
+  const topCfg = configs.pop()
+  check('結果→トップ: page_referrer は data を消した結果ページの URL', topCfg?.[2]?.page_referrer === `${BASE}/result`, String(topCfg?.[2]?.page_referrer))
+  check('結果→トップ: page_location は指定しない（消すものがないページは GA の既定のまま）', topCfg?.[2]?.page_location === undefined, JSON.stringify(topCfg?.[2]))
 
   // dataLayer に積まれたすべての値に、Strava 由来の値が含まれていないか
   const all = JSON.stringify(pushes)

@@ -88,11 +88,14 @@ export default function RootLayout({ children, params }: { children: React.React
                 if (params.has('preview')) return;
                 // GA に送る URL から、診断結果（data＝名前やライドの数値を含む。Strava 由来なので送らない: API Policy 5.4）と
                 // client_id の受け渡し用の cid を消す。前のページ（referrer）が結果ページだった場合も同じ
+                // 消すものがないURLはそのまま返す。config で page_location を指定すると、そのページの後のイベントにも
+                // 同じ値が使われるので、消すものがあったとき（結果ページとその次のページ）だけ指定する。
+                // 結果ページから出るリンクは通常の <a>（ページを読み込み直す）にして、ここが毎回動き直すようにしている
                 function cleanUrl(href) {
                   if (!href) return href;
                   try {
                     var u = new URL(href);
-                    if (u.origin !== location.origin) return href;
+                    if (u.origin !== location.origin || !(u.searchParams.has('data') || u.searchParams.has('cid'))) return href;
                     u.searchParams.delete('data');
                     u.searchParams.delete('cid');
                     return u.toString();
@@ -100,7 +103,11 @@ export default function RootLayout({ children, params }: { children: React.React
                     return '';
                   }
                 }
-                var config = { page_location: cleanUrl(location.href), page_referrer: cleanUrl(document.referrer) };
+                var config = {};
+                var loc = cleanUrl(location.href);
+                if (loc !== location.href) config.page_location = loc;
+                var ref = cleanUrl(document.referrer);
+                if (ref !== document.referrer) config.page_referrer = ref;
                 // Strava 認証から戻ったとき、診断開始時の client_id を引き継いで同じ人として計測し、URL からは消す
                 var cid = params.get('cid');
                 if (cid && /^\\d{1,20}\\.\\d{1,20}$/.test(cid)) {
