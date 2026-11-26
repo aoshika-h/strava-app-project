@@ -59,6 +59,29 @@ function fakeResult(characterId, scores) {
   }
 }
 
+// 結果ページの「Xでポスト」は自サイトの中継（/api/share/x）を通して X の投稿画面へ転送する。
+// 中継をたどって、最終的な X の intent URL と、その中のシェアURLを返す
+const X_SHARE = 'a[href^="/api/share/x"]'
+async function followShare(href) {
+  if (!href) return { intent: null, shareUrl: null }
+  const r = await req(href)
+  let intent = null
+  try { intent = new URL(r.location) } catch {}
+  const shareUrl = intent?.searchParams.get('url') ? new URL(intent.searchParams.get('url')) : null
+  return { status: r.status, intent, shareUrl }
+}
+
+// 結果ページ上の外部サイトへのリンクに、診断結果（キャラID・性別）が入っていないか。
+// 入っていると GA4 の「離脱クリック」がそのURLを自動で記録し、Strava 由来のデータが GA に送られる（API Policy 5.4）
+async function externalLinksWithResult(page) {
+  return page.evaluate((ids) =>
+    Array.from(document.querySelectorAll('a[href]'))
+      .map((a) => a.href)
+      .filter((h) => new URL(h).origin !== location.origin)
+      .filter((h) => ids.some((id) => h.includes(id)) || /_(male|female)\b/.test(h)),
+  ['climber', 'sprinter', 'tt_', 'granfondo', 'allrounder', 'weekend'])
+}
+
 async function newPage(browser, viewport) {
   const context = await browser.newContext({ viewport })
   const page = await context.newPage()
@@ -214,17 +237,21 @@ async function checkResult(browser) {
   check('結果: 今回の結果をブラウザに保存（期間ごと）', stored['90']?.characterId === 'climber', JSON.stringify(stored))
 
   // シェアボタン
-  const href = await page.getAttribute('a[href*="x.com/intent"]', 'href')
-  const shareUrl = href ? new URL(new URL(href).searchParams.get('url') ?? '', BASE) : null
+  const href = await page.getAttribute(X_SHARE, 'href')
+  const { status, intent, shareUrl } = await followShare(href)
+  check('結果: Xでポストは自サイトの中継を通して X の投稿画面へ転送', status === 307 && intent?.origin === 'https://x.com' && intent.pathname === '/intent/post', `${href} → ${status} ${intent}`)
   check(
-    '結果: Xでポストのリンク（/c/{キャラ}_{性別} + utm_campaign=user_share）',
+    '結果: 投稿するシェアURL（/c/{キャラ}_{性別} + utm_campaign=user_share）',
     shareUrl?.pathname === '/c/climber_female' && shareUrl.searchParams.get('utm_campaign') === 'user_share' && shareUrl.searchParams.get('utm_source') === 'x',
-    href ?? 'リンクなし',
+    String(shareUrl),
   )
-  check('結果: Xでポストは通常のリンク（target=_blank）', (await page.getAttribute('a[href*="x.com/intent"]', 'target')) === '_blank')
+  check('結果: 投稿文にキャラ名が入る', !!intent?.searchParams.get('text')?.includes('アルピナ・クロス'), intent?.searchParams.get('text') ?? '')
+  check('結果: Xでポストは通常のリンク（target=_blank）', (await page.getAttribute(X_SHARE, 'target')) === '_blank')
+  const leaked = await externalLinksWithResult(page)
+  check('結果: 外部へのリンクのURLに診断結果（キャラ・性別）が入っていない（GA の離脱クリック対策）', leaked.length === 0, leaked.join(', '))
   const [download] = await Promise.all([
     page.waitForEvent('download', { timeout: 15000 }).catch(() => null),
-    page.locator('a[href*="x.com/intent"] ~ button').first().click(),
+    page.locator(`${X_SHARE} ~ button`).first().click(),
   ])
   check('結果: 保存ボタンでPNGをダウンロード（PC）', !!download && /\.png$/.test(download.suggestedFilename()), download?.suggestedFilename() ?? 'ダウンロードなし')
 
@@ -246,13 +273,18 @@ async function checkResult(browser) {
   // ポルトガル語の結果ページ（?data=）
   await page.goto(`${BASE}/pt/result?data=${first}`, { waitUntil: 'networkidle' })
   const ptBody = await page.innerText('body')
-  const ptHref = await page.getAttribute('a[href*="x.com/intent"]', 'href')
-  check('結果（ポルトガル語）: 表示され、シェアURLが /pt/c/...', /ride insights/i.test(ptBody) && !!ptHref && new URL(new URL(ptHref).searchParams.get('url') ?? '', BASE).pathname === '/pt/c/climber_female', ptHref ?? '')
+  const pt = await followShare(await page.getAttribute(X_SHARE, 'href'))
+  check('結果（ポルトガル語）: 表示され、シェアURLが /pt/c/...', /ride insights/i.test(ptBody) && pt.shareUrl?.pathname === '/pt/c/climber_female', String(pt.shareUrl))
+  check('結果（ポルトガル語）: 外部へのリンクに診断結果が入っていない', (await externalLinksWithResult(page)).length === 0)
 
   // 英語の結果ページ
   await page.goto(`${BASE}/en/result?data=${first}`, { waitUntil: 'networkidle' })
-  const enHref = await page.getAttribute('a[href*="x.com/intent"]', 'href')
-  check('結果（英語）: シェアURLが /en/c/...', !!enHref && new URL(new URL(enHref).searchParams.get('url') ?? '', BASE).pathname === '/en/c/climber_female', enHref ?? '')
+  const en = await followShare(await page.getAttribute(X_SHARE, 'href'))
+  check('結果（英語）: シェアURLが /en/c/...', en.shareUrl?.pathname === '/en/c/climber_female', String(en.shareUrl))
+
+  // 中継に知らないキャラを渡したら、X ではなくトップへ
+  const bad = await req('/api/share/x?c=unknown_male&lang=en')
+  check('Xシェアの中継: 知らないキャラはトップ（/en）へ', bad.status === 307 && new URL(bad.location).pathname === '/en', `${bad.status} ${bad.location}`)
 
   // 壊れた data・data なし
   for (const url of ['/result?data=broken!!', '/result']) {

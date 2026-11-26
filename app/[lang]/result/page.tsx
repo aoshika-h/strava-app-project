@@ -3,8 +3,7 @@
 // 出てくる概念: searchParams、サーバーコンポーネントからクライアントコンポーネントへの props の受け渡し
 // @/ は tsconfig.json の paths で「リポジトリのルート」を指す別名（../../lib のような相対パスを書かずに済む）
 import { getResultPageData } from '@/lib/result-data'
-import { shareSlug } from '@/lib/share'
-import { localePath, type Locale } from '@/lib/i18n'
+import type { Locale } from '@/lib/i18n'
 import ResultView from './_components/ResultView'
 import ResultErrorView from './_components/ResultErrorView'
 import type { Metadata } from 'next'
@@ -29,7 +28,6 @@ export default function ResultPage({
       lang={lang}
       result={data.result}
       insights={data.insights}
-      sharePath={localePath(lang, `/c/${shareSlug(data.result.characterId, data.result.sex)}`)}
       isPreview={data.isPreview}
     />
   )

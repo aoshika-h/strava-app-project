@@ -148,10 +148,10 @@ async function run(browser) {
   // 6. 結果ページのボタン。プレビューは config しないが、ボタンのハンドラが gtag を呼ぶことは確かめられる
   {
     const { page, pushes } = await openPage(browser, '/result?preview=climber&sex=female')
-    await page.click('a[href*="x.com/intent"]', { noWaitAfter: true })
+    await page.click('a[href^="/api/share/x"]', { noWaitAfter: true })
     await page.waitForTimeout(300)
     check('結果: 「Xでポスト」で share_x', !!findEvent(pushes, 'share_x'), show(pushes))
-    await page.locator('a[href*="x.com/intent"] ~ button').first().click()
+    await page.locator('a[href^="/api/share/x"] ~ button').first().click()
     await page.waitForTimeout(3000)
     const sc = findEvent(pushes, 'share_card')
     check('結果: 保存ボタンで share_card（method=download）', sc && sc[2]?.method === 'download', show(pushes))
@@ -181,7 +181,7 @@ async function checkRealResult(browser) {
   check('結果: config 後に URL から cid を消す（data は残す）', !page.url().includes('cid=') && page.url().includes('data='), page.url())
   check('結果: GA に送る page_location に data・cid を含めない', !!cfg?.[2]?.page_location && !/[?&](data|cid)=/.test(cfg[2].page_location), cfg?.[2]?.page_location)
 
-  await page.click('a[href*="x.com/intent"]', { noWaitAfter: true })
+  await page.click('a[href^="/api/share/x"]', { noWaitAfter: true })
   await page.waitForTimeout(300)
   check('結果（?data=）: 「Xでポスト」で share_x', !!findEvent(pushes, 'share_x'), show(pushes))
 

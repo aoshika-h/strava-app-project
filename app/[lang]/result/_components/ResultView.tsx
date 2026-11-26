@@ -22,13 +22,11 @@ export default function ResultView({
   lang,
   result,
   insights,
-  sharePath,
   isPreview = false,
 }: {
   lang: Locale
   result: AnalysisResult
   insights: string[]
-  sharePath: string
   isPreview?: boolean
 }) {
   const t = getDictionary(lang)
@@ -78,7 +76,6 @@ export default function ResultView({
           character={character}
           characterId={result.characterId}
           sex={result.sex}
-          sharePath={sharePath}
         />
 
         {/* ライドの数値から組み立てた一言コメント（本人だけに表示） */}

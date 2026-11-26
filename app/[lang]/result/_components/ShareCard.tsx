@@ -5,9 +5,10 @@
 // 学べること: useRef で画面上の要素（DOM）をつかむ、async 関数と try/catch/finally、必要なときだけライブラリを
 // 読み込む（動的 import）、コールバック式の関数を Promise に包んで await する、Web Share API（スマホの共有シート）
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { getVariant, type Character, type CharacterId, type Sex } from '@/lib/characters'
 import { gtagEvent } from '@/lib/gtag'
+import { shareSlug } from '@/lib/share'
 import { getDictionary, type Locale } from '@/lib/i18n'
 
 // この部品が受け取る props の型。interface で形を決めておくと、渡し忘れや型違いを TypeScript が教えてくれる
@@ -16,10 +17,9 @@ interface Props {
   character: Character
   characterId: CharacterId
   sex: Sex
-  sharePath: string
 }
 
-export default function ShareCard({ lang, character, characterId, sex, sharePath }: Props) {
+export default function ShareCard({ lang, character, characterId, sex }: Props) {
   const t = getDictionary(lang).share
   const imageSrc = `/characters/${characterId}_${sex}.png`
   const genderText = getVariant(characterId, sex, lang)
@@ -30,16 +30,10 @@ export default function ShareCard({ lang, character, characterId, sex, sharePath
   // サーバーには navigator がないので typeof で確かめてから使う（ボタンの文言をスマホ/PCで変えるため）
   const isMobileDevice = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0
 
-  // LINEなどのアプリ内ブラウザは window.open をブロックするため、通常のリンクで投稿画面を開く
-  // シェアURLのドメイン（本番・プレビューで変わる）。window はブラウザにしかないので useEffect で取得する
-  const [origin, setOrigin] = useState('')
-  useEffect(() => setOrigin(window.location.origin), [])
-  // 投稿文は言語ごとに辞書で用意（ハッシュタグもその国でよく使われるものに）
-  const shareText = t.postText(genderText.name, genderText.title)
-  // ユーザーのシェアから来た人を自分の宣伝ポストと分けて数えるため、シェアURLにUTMを付ける（着地時に layout.tsx が share_inflow を送る）
-  const shareUrl = `${origin}${sharePath}?utm_source=x&utm_medium=social&utm_campaign=user_share`
-  // X の投稿画面を開く URL。日本語や記号を URL に入れるので encodeURIComponent で変換する
-  const xIntentUrl = `https://x.com/intent/post?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`
+  // LINEなどのアプリ内ブラウザは window.open をブロックするため、通常のリンクで投稿画面を開く。
+  // リンク先は x.com ではなく自サイトの中継（app/api/share/x/route.ts）。x.com への直接リンクだと、GA4 の「離脱クリック」が
+  // リンクのURL（キャラ名・キャラID・性別入り）を自動で記録してしまうため。中継が投稿文とシェアURL（UTM付き）を組み立てて X へ転送する
+  const xShareHref = `/api/share/x?c=${shareSlug(characterId, sex)}&lang=${lang}`
 
   // 保存・共有ボタンの処理。画像化 → スマホなら共有シート、PCならダウンロード
   const handleSave = async () => {
@@ -93,7 +87,7 @@ export default function ShareCard({ lang, character, characterId, sex, sharePath
       {/* 押しやすいようにカードと同じ幅いっぱい・高さ52pxにする */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '360px', maxWidth: '100%', margin: '0 auto 16px' }}>
         <a
-          href={xIntentUrl}
+          href={xShareHref}
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => gtagEvent('share_x')}

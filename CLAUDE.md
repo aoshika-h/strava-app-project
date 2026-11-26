@@ -60,6 +60,7 @@ app/
 │   └── privacy/page.tsx      プライバシーポリシー（本文は _content/{ja,en,pt}.tsx）
 ├── globals.css
 └── api/auth/{strava,callback}/route.ts  Strava OAuth の開始・コールバック
+└── api/share/x/route.ts      「Xでポスト」の中継（X の投稿画面へ転送）
 components/                   ClickTracker, LanguageSwitcher
 lib/
 ├── i18n/                     言語の設定（config.ts）と画面文言の辞書（dictionaries/{ja,en,pt}.ts）
@@ -152,7 +153,7 @@ Strava API Policy 5.3条により、Strava Data（APIで取得した全データ
 
 ### Xシェア (`app/[lang]/c/[slug]/`)
 
-結果ページの「Xでポスト」ボタンは `/c/{characterId}_{sex}`（英語・ポルトガル語の画面からは `/en/c/...`・`/pt/c/...`）をintent URLで投稿する。`app/[lang]/c/[slug]/opengraph-image.tsx` が `next/og` でキャラ別OGP画像を生成し、Xのタイムラインに画像付きカードを出す。キャラ画像はfsで読むため `next.config.mjs` の `outputFileTracingIncludes` で関数にバンドルしている。日本語フォントはGoogle FontsからNoto Sans JPを必要文字だけ取得する（英語・ポルトガル語の文字も含む）。
+結果ページの「Xでポスト」ボタンは `/c/{characterId}_{sex}`（英語・ポルトガル語の画面からは `/en/c/...`・`/pt/c/...`）をintent URLで投稿する。ボタンのリンク先は x.com ではなく自サイトの中継 `/api/share/x?c={slug}&lang={lang}`（`app/api/share/x/route.ts`）で、ここが投稿文とシェアURLを組み立てて X の投稿画面へ転送する。x.com への直接リンクにすると、GA4 の拡張計測「離脱クリック」がリンクのURL（キャラ名・キャラID・性別入り）を自動で記録し、Strava 由来のデータを GA に送ってしまうため（自サイト内のリンクは離脱クリックの対象外）。**結果ページに外部サイトへのリンクを足すときは、URLに診断結果を入れない**（`check-app` が確認する）。`app/[lang]/c/[slug]/opengraph-image.tsx` が `next/og` でキャラ別OGP画像を生成し、Xのタイムラインに画像付きカードを出す。キャラ画像はfsで読むため `next.config.mjs` の `outputFileTracingIncludes` で関数にバンドルしている。日本語フォントはGoogle FontsからNoto Sans JPを必要文字だけ取得する（英語・ポルトガル語の文字も含む）。
 
 ### OGP画像・サイトマップ
 
