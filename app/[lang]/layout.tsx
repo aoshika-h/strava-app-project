@@ -88,7 +88,8 @@ export default function RootLayout({ children, params }: { children: React.React
                 }
                 // ユーザーのXシェアから来た人の着地（CV）。シェアURLの utm_campaign=user_share で見分ける
                 // キャラ紹介ページは /c/...（日本語）・/en/c/...・/pt/c/... のどれか
-                if (/^(\/(en|pt))?\/c\//.test(location.pathname) && params.get('utm_campaign') === 'user_share') {
+                // ここはテンプレート文字列の中なので、正規表現の \\ は二重に書く（\/ のままだと / になり、構文エラーでGA全体が動かなくなる）
+                if (/^(\\/(en|pt))?\\/c\\//.test(location.pathname) && params.get('utm_campaign') === 'user_share') {
                   gtag('event', 'share_inflow');
                 }
               })();
