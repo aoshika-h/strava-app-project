@@ -9,7 +9,7 @@ npm run dev      # 開発サーバー起動 (localhost:3000)
 npm run build    # 本番ビルド
 npm run lint     # ESLint
 npx tsc --noEmit # 型チェック（テストの代わりに使用）
-npm run check    # 動作チェック一式（テスト用IDでビルド → GA計測チェック → アプリ動作チェック）
+npm run check    # 動作チェック一式（テスト用IDで1回ビルド → GA計測チェック → アプリ動作チェック。片方が失敗しても両方最後まで実行）
 npm run check:ga # GA4計測だけ（scripts/check-ga.cjs）
 npm run check:app # アプリの動作だけ（scripts/check-app.cjs: 全ページ・言語振り分け・Strava認証・結果ページ・OGP・サイトマップ）
 ```
@@ -178,6 +178,8 @@ Strava認証ではXやLINEのアプリ内ブラウザからStravaアプリ・Saf
 | `ui_click` | その他のリンク | `button_id` |
 
 **シェアURLのUTM**: 結果ページのXシェアは `/c/{characterId}_{sex}?utm_source=x&utm_medium=social&utm_campaign=user_share` を投稿する。`utm_campaign=user_share` で着地した人だけを `share_inflow`（CV）として数え、実際に投稿されて誰かが見たことの裏付けにする。開発者が自分で宣伝するポストには `utm_campaign=owner_post` を付け、ユーザーのシェアと混ぜない。ファネルは 結果ページ → `share_x` → `share_inflow` → `share_page_cta`。
+
+**GAに送るURL**: 結果ページのURLには診断結果（`?data=`、名前やライドの数値を含む）が入るため、初期化スクリプトで `page_location`・`page_referrer` から `data` と `cid` を消してから `config` する（そのままだとページビューにURL全体が載り、Strava由来のデータをGAに送ってしまう）。2026-11-26 まではURL全体を送っていた。
 
 ユーザープロパティ `predicted_type`（ユーザー単位のカスタムディメンション）には、診断前にユーザーが選んだ予想タイプ（6キャラのID または `unknown`）を送る。ユーザー自身の入力なのでStrava由来ではない。
 

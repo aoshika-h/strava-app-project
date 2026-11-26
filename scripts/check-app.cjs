@@ -67,6 +67,10 @@ async function newPage(browser, viewport) {
   page.on('console', (m) => {
     if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text())
   })
+  // 読み込みに失敗した自サイトのファイル（CSS・JS・画像・フォントなど）。外部（GA・Google Fonts）は対象外
+  page.on('response', (r) => {
+    if (r.url().startsWith(BASE) && r.status() >= 400 && !r.url().includes('/api/auth/')) errors.push(`${r.status()} ${r.url()}`)
+  })
   await page.route(/googletagmanager\.com|google-analytics\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: '' }))
   return { context, page, errors }
 }
@@ -119,6 +123,8 @@ async function checkMiddleware() {
     ['/', { 'accept-language': 'pt-BR', cookie: 'veloava_locale=ja' }, 200, ''],
     ['/', { 'accept-language': 'pt-BR', 'user-agent': 'Twitterbot/1.0' }, 200, ''],
     ['/c/climber_male', { 'accept-language': 'pt-BR' }, 307, '/pt/c/climber_male'],
+    ['/c/climber_male?utm_source=x&utm_medium=social&utm_campaign=user_share', { 'accept-language': 'pt-BR' }, 307, '/pt/c/climber_male', 'utm_campaign=user_share'],
+    ['/ja/c/climber_male?utm_campaign=user_share', {}, 307, '/c/climber_male', 'utm_campaign=user_share'],
     ['/result?preview=climber', { 'accept-language': 'en-US' }, 200, ''],
     ['/privacy', { 'accept-language': 'en-US' }, 200, ''],
     ['/ja/privacy', {}, 307, '/privacy'],
@@ -128,9 +134,10 @@ async function checkMiddleware() {
     ['/c/unknown_male', {}, 404, ''],
     ['/c/climber_other', {}, 404, ''],
   ]
-  for (const [url, headers, status, loc] of cases) {
+  for (const [url, headers, status, loc, keepQuery] of cases) {
     const r = await req(url, headers)
-    const locOk = !loc || new URL(r.location, BASE).pathname === loc
+    // keepQuery: 転送先にクエリ（シェアのUTMなど）が残っていること
+    const locOk = (!loc || new URL(r.location, BASE).pathname === loc) && (!keepQuery || r.location.includes(keepQuery))
     check(`言語振り分け ${url} ${JSON.stringify(headers)} → ${status}${loc ? ` ${loc}` : ''}`, r.status === status && locOk, `実際: ${r.status} ${r.location}`)
   }
 }
@@ -171,9 +178,15 @@ async function checkCallback() {
     const u = r.location ? new URL(r.location) : null
     check(`認証コールバック ${url} → ${top}?error=${error}`, r.status === 307 && u?.pathname === top && u.searchParams.get('error') === error, `実際: ${r.status} ${r.location}`)
   }
-  // エラー表示がトップに出るか
-  const html = await (await req('/?error=access_denied')).text()
-  check('トップ: ?error= のエラーメッセージを表示', /bg-red-500/.test(html))
+  // エラー表示がトップに出るか（4種類 × 3言語）。英語・ポルトガル語に日本語が混ざっていないか
+  for (const l of LANGS) {
+    for (const code of ['access_denied', 'no_code', 'analysis_failed', 'athlete_limit']) {
+      const html = await (await req(`${l || '/'}?error=${code}`)).text()
+      const msg = html.match(/<div class="[^"]*bg-red-500[^"]*">([^<]+)<\/div>/)?.[1] ?? ''
+      const langOk = l === '' ? /[ぁ-んァ-ン一-龥]/.test(msg) : msg.length > 0 && !/[ぁ-んァ-ン一-龥]/.test(msg)
+      check(`トップ${l}: ?error=${code} のメッセージを表示`, msg.length > 0 && langOk, msg || 'メッセージなし')
+    }
+  }
 }
 
 // 5. 結果ページ
@@ -186,14 +199,17 @@ async function checkResult(browser) {
   await page.goto(BASE + '/', { waitUntil: 'networkidle' })
   await page.evaluate(() => localStorage.setItem('veloava_prediction', 'sprinter'))
   await page.goto(`${BASE}/result?data=${first}`, { waitUntil: 'networkidle' })
-  const body1 = await page.textContent('body')
-  check('結果: ?data= を復元して表示（日本語の名前も文字化けしない）', body1.includes('山田 花子'), body1.slice(0, 200))
+  // innerText は画面に見えている文字だけ（script タグの中身を含まない）。CSS の uppercase も反映されるので見出しは大文字小文字を区別せずに探す
+  const body1 = await page.innerText('body')
+  check('結果: ?data= を復元して表示（キャラ名と統計が画面に出る）', body1.includes('アルピナ・クロス') && body1.includes('2,400'), body1.slice(0, 300))
+  // 名前は今は画面に出していないが、UTF-8 の復元が壊れていないかをページに渡すデータで確かめる
+  check('結果: 日本語の名前が文字化けせずに復元される', (await page.content()).includes('山田 花子'))
   check('結果: スクリプトエラーなし', errors.length === 0, errors.join(' / '))
-  check('結果: 一言コメント（Ride Insights）を表示', body1.includes('Ride Insights'))
-  check('結果: レーダーチャートを表示', (await page.locator('svg').count()) > 0)
+  check('結果: 一言コメント（Ride Insights）を表示', /ride insights/i.test(body1))
+  check('結果: レーダーチャートを表示', (await page.locator('svg polygon').count()) >= 2)
   check('結果: 予想の答え合わせを表示（外れ）', body1.includes('意外な一面'))
   check('結果: 予想は一度だけ（表示後に消える）', (await page.evaluate(() => localStorage.getItem('veloava_prediction'))) === null)
-  check('結果: 前回がないときは前回比較を出さない', !body1.includes('Character Evolution'))
+  check('結果: 前回がないときは前回比較を出さない', !/character evolution/i.test(body1))
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('veloava_last_results') || '{}'))
   check('結果: 今回の結果をブラウザに保存（期間ごと）', stored['90']?.characterId === 'climber', JSON.stringify(stored))
 
@@ -214,9 +230,24 @@ async function checkResult(browser) {
 
   // 2回目（同じ期間で別のキャラ）→ 前回との比較
   await page.goto(`${BASE}/result?data=${second}`, { waitUntil: 'networkidle' })
-  const body2 = await page.textContent('body')
-  check('結果: 2回目は前回との比較（Character Evolution）を表示', body2.includes('Character Evolution'))
+  const body2 = await page.innerText('body')
+  check('結果: 2回目は前回との比較（Character Evolution）を表示', /character evolution/i.test(body2))
   check('結果: 予想がないときは答え合わせを出さない', !body2.includes('意外な一面') && !body2.includes('予想的中'))
+
+  // 期間が違う診断（180日）とは比べない。予想が当たったときの表示も確かめる
+  const other = fakeResult('climber', { climbing: 80, speed: 50, endurance: 60, power: 0, consistency: 55 })
+  other.stats.periodDays = 180
+  await page.evaluate(() => localStorage.setItem('veloava_prediction', 'climber'))
+  await page.goto(`${BASE}/result?data=${encodeResult(other)}`, { waitUntil: 'networkidle' })
+  const body3 = await page.innerText('body')
+  check('結果: 期間が違う前回（90日）とは比較しない', !/character evolution/i.test(body3))
+  check('結果: 予想が当たったときの表示（予想的中）', body3.includes('予想的中'))
+
+  // ポルトガル語の結果ページ（?data=）
+  await page.goto(`${BASE}/pt/result?data=${first}`, { waitUntil: 'networkidle' })
+  const ptBody = await page.innerText('body')
+  const ptHref = await page.getAttribute('a[href*="x.com/intent"]', 'href')
+  check('結果（ポルトガル語）: 表示され、シェアURLが /pt/c/...', /ride insights/i.test(ptBody) && !!ptHref && new URL(new URL(ptHref).searchParams.get('url') ?? '', BASE).pathname === '/pt/c/climber_female', ptHref ?? '')
 
   // 英語の結果ページ
   await page.goto(`${BASE}/en/result?data=${first}`, { waitUntil: 'networkidle' })

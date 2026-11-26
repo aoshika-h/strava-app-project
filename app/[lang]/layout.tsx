@@ -86,16 +86,30 @@ export default function RootLayout({ children, params }: { children: React.React
               (function () {
                 var params = new URLSearchParams(location.search);
                 if (params.has('preview')) return;
+                // GA に送る URL から、診断結果（data＝名前やライドの数値を含む。Strava 由来なので送らない: API Policy 5.4）と
+                // client_id の受け渡し用の cid を消す。前のページ（referrer）が結果ページだった場合も同じ
+                function cleanUrl(href) {
+                  if (!href) return href;
+                  try {
+                    var u = new URL(href);
+                    if (u.origin !== location.origin) return href;
+                    u.searchParams.delete('data');
+                    u.searchParams.delete('cid');
+                    return u.toString();
+                  } catch (e) {
+                    return '';
+                  }
+                }
+                var config = { page_location: cleanUrl(location.href), page_referrer: cleanUrl(document.referrer) };
                 // Strava 認証から戻ったとき、診断開始時の client_id を引き継いで同じ人として計測し、URL からは消す
                 var cid = params.get('cid');
                 if (cid && /^\\d{1,20}\\.\\d{1,20}$/.test(cid)) {
-                  gtag('config', '${GA_ID}', { client_id: cid });
+                  config.client_id = cid;
                   params.delete('cid');
                   var qs = params.toString();
                   history.replaceState(history.state, '', location.pathname + (qs ? '?' + qs : '') + location.hash);
-                } else {
-                  gtag('config', '${GA_ID}');
                 }
+                gtag('config', '${GA_ID}', config);
                 // ユーザーのXシェアから来た人の着地（CV）。シェアURLの utm_campaign=user_share で見分ける
                 // キャラ紹介ページは /c/...（日本語）・/en/c/...・/pt/c/... のどれか
                 // ここはテンプレート文字列の中なので、正規表現の \\ は二重に書く（\/ のままだと / になり、構文エラーでGA全体が動かなくなる）

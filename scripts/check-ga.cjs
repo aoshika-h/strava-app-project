@@ -100,20 +100,28 @@ async function run(browser) {
   }
 
   // 4. トップ: 予想 → 期間ボタンで diagnosis_start とユーザープロパティ
-  {
-    const { page, pushes } = await openPage(browser, '/')
-    await page.locator('button').filter({ hasText: /わからない|予想しない/ }).first().click()
+  //    period は言語に関係なく日本語の表記（3ヶ月など）で送る仕様。非公開を含めるチェックと、キャラを選んだ予想も試す
+  for (const c of [
+    { url: '/', pick: /わからない|予想しない/, predicted: 'unknown', privateBox: false },
+    { url: '/en', pick: /^クライマー$|Climber/, predicted: 'climber', privateBox: true },
+    { url: '/pt', pick: /Sprinter|Velocista/, predicted: 'sprinter', privateBox: false },
+  ]) {
+    const { page, pushes } = await openPage(browser, c.url)
+    await page.locator('button').filter({ hasText: c.pick }).first().click()
     await page.waitForTimeout(200)
-    await page.locator('button').filter({ hasText: /ヶ月|年/ }).first().click({ noWaitAfter: true })
+    if (c.privateBox) await page.locator('input[type="checkbox"]').first().check()
+    // 期間ボタンの1つ目（90日）。文言は言語ごとに違う
+    await page.locator('button').filter({ hasText: /ヶ月|months?|meses/i }).first().click({ noWaitAfter: true })
     await page.waitForTimeout(1000)
     const e = findEvent(pushes, 'diagnosis_start')
+    const expected = { period: '3ヶ月', predicted_type: c.predicted, include_private: c.privateBox ? 'yes' : 'no' }
     check(
-      'トップ: 期間ボタンで diagnosis_start（period・predicted_type・include_private）',
-      e && e[2]?.period && e[2]?.predicted_type === 'unknown' && ['yes', 'no'].includes(e[2]?.include_private),
+      `${c.url}: 期間ボタンで diagnosis_start ${JSON.stringify(expected)}`,
+      e && Object.entries(expected).every(([k, v]) => e[2]?.[k] === v),
       show(pushes),
     )
     const up = pushes.find((p) => p[0] === 'set' && p[1] === 'user_properties')
-    check('トップ: ユーザープロパティ predicted_type', up && up[2]?.predicted_type === 'unknown', show(pushes))
+    check(`${c.url}: ユーザープロパティ predicted_type=${c.predicted}`, up && up[2]?.predicted_type === c.predicted, show(pushes))
     await page.close()
   }
 
@@ -154,6 +162,42 @@ async function run(browser) {
   }
 }
 
+// 7. 本物の結果ページ（?data=）。Strava 認証から戻った直後と同じ URL で開く
+//    - client_id を引き継いで config し、URL から cid を消す
+//    - GA に送る URL（page_location・page_referrer）や、どのイベントにも Strava 由来の値（data・名前・キャラ・性別）を載せない（API Policy 5.4）
+async function checkRealResult(browser) {
+  const result = {
+    characterId: 'climber',
+    athleteName: '山田 花子',
+    profileImageUrl: '',
+    sex: 'female',
+    stats: { totalRides: 40, avgDistanceKm: 60, totalDistanceKm: 2400, totalElevationM: 16000, avgSpeedKmh: 27, climbingRatioMPerKm: 6.7, ridingDaysPerWeek: 3, avgWatts: 0, periodDays: 90, outdoorRides: 40, indoorRides: 0 },
+    scores: { climbing: 85, speed: 50, endurance: 60, power: 0, consistency: 55 },
+  }
+  const data = Buffer.from(JSON.stringify(result), 'utf8').toString('base64url')
+  const { page, pushes } = await openPage(browser, `/result?data=${data}&cid=123456.789`)
+  const cfg = pushes.find((p) => p[0] === 'config' && p[1] === GA_ID)
+  check('結果（?data=&cid=）: client_id を引き継いで config', cfg?.[2]?.client_id === '123456.789', show(pushes))
+  check('結果: config 後に URL から cid を消す（data は残す）', !page.url().includes('cid=') && page.url().includes('data='), page.url())
+  check('結果: GA に送る page_location に data・cid を含めない', !!cfg?.[2]?.page_location && !/[?&](data|cid)=/.test(cfg[2].page_location), cfg?.[2]?.page_location)
+
+  await page.click('a[href*="x.com/intent"]', { noWaitAfter: true })
+  await page.waitForTimeout(300)
+  check('結果（?data=）: 「Xでポスト」で share_x', !!findEvent(pushes, 'share_x'), show(pushes))
+
+  // 結果ページからトップへ戻ったときの referrer にも data を載せない（同じサイト内の移動はリファラーに URL 全体が入るため）
+  await page.goto(BASE + '/', { waitUntil: 'networkidle', referer: `${BASE}/result?data=${data}` })
+  await page.waitForTimeout(300)
+  const topCfg = pushes.filter((p) => p[0] === 'config' && p[1] === GA_ID).pop()
+  check('トップ（結果ページから来た）: page_referrer に data を含めない', !/[?&]data=/.test(topCfg?.[2]?.page_referrer ?? ''), topCfg?.[2]?.page_referrer)
+
+  // dataLayer に積まれたすべての値に、Strava 由来の値が含まれていないか
+  const all = JSON.stringify(pushes)
+  const leaks = [data, '山田', result.characterId, '"female"', 'female', '2400', '16000'].filter((v) => all.includes(v))
+  check('結果: GA のどのデータにも Strava 由来の値（data・名前・キャラ・性別・数値）が入っていない', leaks.length === 0, `含まれていた値: ${leaks.join(', ')}\n    ${show(pushes)}`)
+  await page.close()
+}
+
 async function isServerUp() {
   try {
     return (await fetch(BASE + '/')).ok
@@ -187,6 +231,7 @@ async function waitForServer() {
     await waitForServer()
     browser = await chromium.launch()
     await run(browser)
+    await checkRealResult(browser)
   } catch (e) {
     console.error(e)
     failures.push('実行エラー')
