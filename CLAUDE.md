@@ -57,7 +57,7 @@ app/
 │   ├── result/page.tsx       結果（_components/: ResultView, ShareCard, InsightsCard, EvolutionCard, RadarChart, PredictionReveal, ResultErrorView）
 │   ├── c/[slug]/page.tsx     キャラ紹介ページ（Xのカードの着地点）
 │   ├── c/[slug]/opengraph-image.tsx  キャラ別OGP画像
-│   ├── not-found.tsx         404ページ（3言語。言語は middleware が付ける x-veloava-lang ヘッダーから）
+│   ├── not-found.tsx         404ページ（3言語。言語はブラウザのURLの先頭から。headers() は使わない＝使うと配下が全部動的になる）
 │   ├── [...rest]/page.tsx    どのページにも当てはまらないURLを not-found.tsx へ回す
 │   └── privacy/page.tsx      プライバシーポリシー（本文は _content/{ja,en,pt}.tsx）
 ├── globals.css
@@ -172,7 +172,7 @@ Strava API Policy 5.3条により、Strava Data（APIで取得した全データ
 - **canonical と別言語版（hreflang）**: ページごとに `generateMetadata` で `lib/seo.ts` の `pageAlternates(lang, path)` を指定する（トップ・プライバシー・キャラ紹介）。layout で固定しない（固定すると全ページの別言語版がトップになる）。キャラ紹介ページの canonical は UTM なしの正規URL
 - **アイコン**: `public/favicon.ico`・`icon.svg`・`apple-touch-icon.png`・`icon-192.png`・`icon-512.png`（`node scripts/generate-icons.cjs` で作る）と `app/manifest.ts`。`layout.tsx` の `viewport` でテーマ色（`#0A0A0F`）とダーク配色を指定
 - **セキュリティヘッダー**: `next.config.mjs` で全レスポンスに nosniff・Referrer-Policy・X-Frame-Options/frame-ancestors・Permissions-Policy を付け、`X-Powered-By` を消す。HSTS は Vercel が付ける。CSP（スクリプトの読み込み制限）は GA との両立の調整が要るので未導入
-- **404**: `app/[lang]/not-found.tsx` がサイトのデザイン・3言語で出す。存在しないURLは `[...rest]/page.tsx` が `notFound()` を呼ぶ
+- **404**: `app/[lang]/not-found.tsx` がサイトのデザイン・3言語で出す。存在しないURLは `[...rest]/page.tsx` が `notFound()` を呼ぶ。not-found で `headers()` などサーバーの動的な値を使うと、`[lang]` 配下のページが静的に作られなくなる（プライバシーのCDNキャッシュが効かなくなる）ので使わない
 - **見出し**: 各ページの `h1` は1つ（結果ページはシェアカードのキャラ名）。**構造化データ**: トップに JSON-LD（`WebApplication`）
 - **画像**: `next/image` の `fill` には `sizes` を付ける（付けないと画面幅いっぱいの大きな画像を読む）。**タップ領域**: ボタン・リンクは 24px 以上（WCAG 2.2）。文中のリンクは対象外
 - 上の項目は `check-app` の「Web の基本」で確かめている

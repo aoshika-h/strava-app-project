@@ -99,6 +99,17 @@ async function run(browser) {
     await page.close()
   }
 
+  // 404 ページ: GA が初期化され、「トップへ」のリンクで ui_click
+  {
+    const { page, pushes, errors } = await openPage(browser, '/en/no-such-page')
+    check('404: スクリプトエラーなし・config が呼ばれる', errors.length === 0 && hasConfig(pushes), errors.join(' / ') + show(pushes))
+    await page.click('[data-ga-id="not_found_back_top"]', { noWaitAfter: true })
+    await page.waitForTimeout(300)
+    const e = findEvent(pushes, 'ui_click')
+    check('404: 「トップへ」で ui_click（button_id=not_found_back_top）', e?.[2]?.button_id === 'not_found_back_top', show(pushes))
+    await page.close()
+  }
+
   // 4. トップ: 予想 → 期間ボタンで diagnosis_start とユーザープロパティ
   //    period は言語に関係なく日本語の表記（3ヶ月など）で送る仕様。非公開を含めるチェックと、キャラを選んだ予想も試す
   for (const c of [

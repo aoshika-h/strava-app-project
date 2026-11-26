@@ -354,9 +354,13 @@ async function checkWebBasics(browser) {
   try { ld = JSON.parse(top.match(/<script type="application\/ld\+json">([^<]+)<\/script>/)?.[1] ?? '') } catch {}
   check('トップ: 構造化データ（WebApplication）', ld?.['@type'] === 'WebApplication' && ld.name === 'VeloAva')
 
+  // プライバシーページはビルド時に静的に作られ、CDN でキャッシュされる（404 などで動的な値を使うと壊れる）
+  const privacy = await fetch(BASE + '/en/privacy')
+  check('プライバシーページが静的配信（Cache-Control に s-maxage）', (privacy.headers.get('cache-control') ?? '').includes('s-maxage'), privacy.headers.get('cache-control') ?? '')
+
   // 404 はサイトのデザイン・言語で出る（Next.js は404をストリーミングで描くので、HTML ではなくブラウザで表示を確かめる）
   const { context, page } = await newPage(browser, { width: 390, height: 844 })
-  for (const [url, lang, text] of [['/no-such-page', 'ja', 'ページが見つかりません'], ['/en/no-such-page', 'en', 'Page not found'], ['/pt/no/such', 'pt-BR', 'Página não encontrada'], ['/fr', 'ja', 'ページが見つかりません'], ['/c/unknown_male', 'ja', 'ページが見つかりません']]) {
+  for (const [url, lang, text] of [['/no-such-page', 'ja', 'ページが見つかりません'], ['/en/no-such-page', 'en', 'Page not found'], ['/pt/no/such', 'pt-BR', 'Página não encontrada'], ['/fr', 'ja', 'ページが見つかりません'], ['/c/unknown_male', 'ja', 'ページが見つかりません'], ['/en/foo.png', 'en', 'Page not found']]) {
     const res = await page.goto(BASE + url, { waitUntil: 'networkidle' })
     const got = await page.evaluate(() => ({ lang: document.documentElement.lang, h1: document.querySelector('h1')?.innerText ?? '', bg: getComputedStyle(document.querySelector('main') ?? document.body).backgroundColor }))
     check(`404 ${url}: 404・lang="${lang}"・その言語の案内・サイトの背景色`, res.status() === 404 && got.lang === lang && got.h1 === text && got.bg === 'rgb(10, 10, 15)', `${res.status()} ${JSON.stringify(got)}`)
