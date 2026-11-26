@@ -160,6 +160,7 @@ Strava API Policy 5.3条により、Strava Data（APIで取得した全データ
 - 画像は `node scripts/generate-og.cjs` で作り直す（トップの見出しやキャラ画像を変えたとき）。Strava公認と受け取られないよう、画像にStravaの名前・ロゴは入れない
 - `app/sitemap.ts`（`/sitemap.xml`）にトップ・プライバシー・キャラ紹介ページ12種を3言語ぶん、互いの別言語版（hreflang）として載せる。`app/robots.ts` は `/api/` を巡回対象外にしてサイトマップの場所を伝える
 - 結果ページ（`/result`）は個人の診断結果なので `noindex` にし、サイトマップにも入れない
+- Google Search Console は URLプレフィックス `https://veloava.vercel.app/` で、HTMLファイル `public/googledef27e552d077cc2.html` により所有権を確認している。**このファイルは消さない**（Google が定期的に確認し直し、なくなると確認が外れてサイトマップも読まれなくなる）。`middleware.ts` は拡張子付きのパスを対象外にしているので、言語の振り分けを通らずそのまま返る
 
 ### GA4 計測
 

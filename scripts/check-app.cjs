@@ -291,6 +291,10 @@ async function checkSeo() {
     if (r.status !== 200) dead++
   }
   check('サイトマップ: 全URLが 200 で開ける', dead === 0, `${dead}件が開けない`)
+  // Google Search Console の所有権確認ファイル。Google は定期的に確認し直すので、消えたり転送されたりすると確認が外れる
+  const gsc = await req('/googledef27e552d077cc2.html')
+  check('Search Console の確認ファイルが 200 で開ける', gsc.status === 200 && (await gsc.text()).includes('google-site-verification: googledef27e552d077cc2.html'), `${gsc.status} ${gsc.location}`)
+
   const robots = await (await req('/robots.txt')).text()
   check('robots.txt: /api/ を除外しサイトマップを案内', robots.includes('Disallow: /api/') && /Sitemap: .*\/sitemap\.xml/.test(robots), robots)
 }
