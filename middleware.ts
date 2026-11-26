@@ -15,6 +15,10 @@ export function middleware(request: NextRequest) {
 
   if (first === 'en' || first === 'pt') return NextResponse.next()
 
+  // キャラ別OGP画像（opengraph-image.tsx）の URL は、Next.js が内部のパス（/ja/c/.../opengraph-image）で <meta> に書き出す。
+  // 下の転送をかけると X などのカード取得が毎回 307 をはさむので、画像だけは /ja 付きのまま直接返す
+  if (first === DEFAULT_LOCALE && pathname.endsWith('/opengraph-image')) return NextResponse.next()
+
   if (first === DEFAULT_LOCALE) {
     const url = request.nextUrl.clone()
     url.pathname = pathname.slice(DEFAULT_LOCALE.length + 1) || '/'
