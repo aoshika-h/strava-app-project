@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "check:ga": "node scripts/check-ga.cjs"
+    "check:ga": "node scripts/check-ga.cjs",
+    "check:app": "node scripts/check-app.cjs",
+    "check": "node scripts/check-ga.cjs && node scripts/check-app.cjs --no-build"
   },
   "dependencies": {
     "html2canvas": "^1.4.1",
