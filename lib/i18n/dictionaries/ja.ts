@@ -107,6 +107,11 @@ export const ja = {
     lead: '私のサイクリストタイプは',
     cta: 'あなたは何タイプ？',
   },
+  notFound: {
+    title: 'ページが見つかりません',
+    body: 'URLが間違っているか、ページが移動した可能性があります。',
+    backTop: 'トップに戻って診断する',
+  },
   privacy: {
     metaTitle: 'プライバシーポリシー — VeloAva',
     title: 'プライバシーポリシー',

@@ -9,15 +9,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { DEFAULT_LOCALE, LOCALE_COOKIE, detectLocale, isLocale } from '@/lib/i18n/config'
 
+// 表示する言語をリクエストヘッダーで後ろに伝える（URL の params を受け取れない not-found.tsx が使う）
+function withLang(request: NextRequest, lang: string) {
+  const headers = new Headers(request.headers)
+  headers.set('x-veloava-lang', lang)
+  return { request: { headers } }
+}
+
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl
   const first = pathname.split('/')[1]
 
-  if (first === 'en' || first === 'pt') return NextResponse.next()
+  if (first === 'en' || first === 'pt') return NextResponse.next(withLang(request, first))
 
   // キャラ別OGP画像（opengraph-image.tsx）の URL は、Next.js が内部のパス（/ja/c/.../opengraph-image）で <meta> に書き出す。
   // 下の転送をかけると X などのカード取得が毎回 307 をはさむので、画像だけは /ja 付きのまま直接返す
-  if (first === DEFAULT_LOCALE && pathname.endsWith('/opengraph-image')) return NextResponse.next()
+  if (first === DEFAULT_LOCALE && pathname.endsWith('/opengraph-image')) return NextResponse.next(withLang(request, DEFAULT_LOCALE))
 
   if (first === DEFAULT_LOCALE) {
     const url = request.nextUrl.clone()
@@ -42,7 +49,7 @@ export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone()
   url.pathname = `/${DEFAULT_LOCALE}${pathname}`
   url.search = search
-  return NextResponse.rewrite(url)
+  return NextResponse.rewrite(url, withLang(request, DEFAULT_LOCALE))
 }
 
 // middleware を動かすパスの指定。API・Next.js の内部ファイル・画像などの静的ファイル（拡張子付き）は対象外

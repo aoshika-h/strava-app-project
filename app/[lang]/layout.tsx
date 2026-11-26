@@ -5,7 +5,7 @@
 // 各ページの page.tsx の中身が、下の RootLayout の children として差し込まれる。
 // 出てくる概念: generateMetadata（<head> の自動生成）、generateStaticParams、next/font、<Script strategy>、環境変数 NEXT_PUBLIC_*
 
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import Script from 'next/script'
 import { notFound } from 'next/navigation'
@@ -41,9 +41,16 @@ export function generateMetadata({ params }: { params: { lang: string } }): Meta
     ),
     title: t.meta.title,
     description: t.meta.description,
-    // 検索エンジンに「同じページの別言語版」を伝える（hreflang）。x-default は言語が合わない人向けの既定
-    alternates: {
-      languages: { ja: '/', en: '/en', 'pt-BR': '/pt', 'x-default': '/en' },
+    // canonical と別言語版（hreflang）はページごとに違うので、各ページの generateMetadata で lib/seo.ts の pageAlternates を使って指定する
+    // （ここで固定すると、プライバシーやキャラ紹介ページまで「別言語版はトップ」と伝えてしまう）
+    applicationName: 'VeloAva',
+    // ファビコンとホーム画面用のアイコン（public/ に置いた画像。scripts/generate-icons.cjs で作る）
+    icons: {
+      icon: [
+        { url: '/favicon.ico', sizes: '32x32' },
+        { url: '/icon.svg', type: 'image/svg+xml' },
+      ],
+      apple: '/apple-touch-icon.png',
     },
     // OGP画像は言語ごとの静的画像（public/og/{lang}.png、scripts/generate-og.cjs で作る）。
     // キャラ紹介ページ（/c/...）は opengraph-image.tsx のキャラ別画像がこれより優先される
@@ -62,6 +69,12 @@ export function generateMetadata({ params }: { params: { lang: string } }): Meta
       images: [`/og/${lang}.png`],
     },
   }
+}
+
+// ブラウザのアドレスバーなどの色（スマホ）と、ダークな配色のサイトであることをブラウザに伝える
+export const viewport: Viewport = {
+  themeColor: '#0A0A0F',
+  colorScheme: 'dark',
 }
 
 // 'use client' が付いていないので、これはサーバーコンポーネント（サーバーでHTMLを作るだけで、ブラウザ用のJSは最小限）。

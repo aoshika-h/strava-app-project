@@ -8,11 +8,9 @@ import type { MetadataRoute } from 'next'
 import { CHARACTER_IDS } from '@/lib/characters/types'
 import { LOCALES, localePath } from '@/lib/i18n/config'
 import { shareSlug } from '@/lib/share'
+import { HREFLANG } from '@/lib/seo'
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://veloava.vercel.app'
-
-// hreflang の言語コード。ポルトガル語はブラジル向けなので pt-BR（<html lang> と同じ）
-const HREFLANG = { ja: 'ja', en: 'en', pt: 'pt-BR' } as const
 
 function entries(path: string, priority: number): MetadataRoute.Sitemap {
   const languages = Object.fromEntries(LOCALES.map((l) => [HREFLANG[l], BASE_URL + localePath(l, path)]))

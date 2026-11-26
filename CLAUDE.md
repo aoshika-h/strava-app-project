@@ -57,8 +57,11 @@ app/
 │   ├── result/page.tsx       結果（_components/: ResultView, ShareCard, InsightsCard, EvolutionCard, RadarChart, PredictionReveal, ResultErrorView）
 │   ├── c/[slug]/page.tsx     キャラ紹介ページ（Xのカードの着地点）
 │   ├── c/[slug]/opengraph-image.tsx  キャラ別OGP画像
+│   ├── not-found.tsx         404ページ（3言語。言語は middleware が付ける x-veloava-lang ヘッダーから）
+│   ├── [...rest]/page.tsx    どのページにも当てはまらないURLを not-found.tsx へ回す
 │   └── privacy/page.tsx      プライバシーポリシー（本文は _content/{ja,en,pt}.tsx）
 ├── globals.css
+├── sitemap.ts / robots.ts / manifest.ts  /sitemap.xml・/robots.txt・/manifest.webmanifest
 └── api/auth/{strava,callback}/route.ts  Strava OAuth の開始・コールバック
 └── api/share/x/route.ts      「Xでポスト」の中継（X の投稿画面へ転送）
 components/                   ClickTracker, LanguageSwitcher
@@ -71,6 +74,7 @@ lib/
 ├── oauth-state.ts            OAuth の state（期間・GA client_id・言語）
 ├── result-data.ts            結果のURLエンコード・復元、結果ページ用データの組み立て
 ├── share.ts                  シェアページの slug
+├── seo.ts                    canonical・別言語版（hreflang）の組み立て
 ├── result-history.ts / prediction.ts / changelog.ts / score-axes.ts / gtag.ts
 ```
 - `app/[lang]/c/[slug]/opengraph-image.tsx` は `node:fs` と `next/og` を使うサーバー専用。クライアントコンポーネント（`'use client'`）からサーバー専用のコードを import しない。必要な値はページ（サーバー）で計算してpropsで渡す
@@ -162,6 +166,16 @@ Strava API Policy 5.3条により、Strava Data（APIで取得した全データ
 - `app/sitemap.ts`（`/sitemap.xml`）にトップ・プライバシー・キャラ紹介ページ12種を3言語ぶん、互いの別言語版（hreflang）として載せる。`app/robots.ts` は `/api/` を巡回対象外にしてサイトマップの場所を伝える
 - 結果ページ（`/result`）は個人の診断結果なので `noindex` にし、サイトマップにも入れない
 - Google Search Console は URLプレフィックス `https://veloava.vercel.app/` で、HTMLファイル `public/googledef27e552d077cc2.html` により所有権を確認している。**このファイルは消さない**（Google が定期的に確認し直し、なくなると確認が外れてサイトマップも読まれなくなる）。`middleware.ts` は拡張子付きのパスを対象外にしているので、言語の振り分けを通らずそのまま返る
+
+### Webの基本（いまの定石として入れているもの）
+
+- **canonical と別言語版（hreflang）**: ページごとに `generateMetadata` で `lib/seo.ts` の `pageAlternates(lang, path)` を指定する（トップ・プライバシー・キャラ紹介）。layout で固定しない（固定すると全ページの別言語版がトップになる）。キャラ紹介ページの canonical は UTM なしの正規URL
+- **アイコン**: `public/favicon.ico`・`icon.svg`・`apple-touch-icon.png`・`icon-192.png`・`icon-512.png`（`node scripts/generate-icons.cjs` で作る）と `app/manifest.ts`。`layout.tsx` の `viewport` でテーマ色（`#0A0A0F`）とダーク配色を指定
+- **セキュリティヘッダー**: `next.config.mjs` で全レスポンスに nosniff・Referrer-Policy・X-Frame-Options/frame-ancestors・Permissions-Policy を付け、`X-Powered-By` を消す。HSTS は Vercel が付ける。CSP（スクリプトの読み込み制限）は GA との両立の調整が要るので未導入
+- **404**: `app/[lang]/not-found.tsx` がサイトのデザイン・3言語で出す。存在しないURLは `[...rest]/page.tsx` が `notFound()` を呼ぶ
+- **見出し**: 各ページの `h1` は1つ（結果ページはシェアカードのキャラ名）。**構造化データ**: トップに JSON-LD（`WebApplication`）
+- **画像**: `next/image` の `fill` には `sizes` を付ける（付けないと画面幅いっぱいの大きな画像を読む）。**タップ領域**: ボタン・リンクは 24px 以上（WCAG 2.2）。文中のリンクは対象外
+- 上の項目は `check-app` の「Web の基本」で確かめている
 
 ### GA4 計測
 

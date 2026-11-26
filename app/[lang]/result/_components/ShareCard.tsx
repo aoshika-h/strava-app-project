@@ -201,16 +201,17 @@ export default function ShareCard({ lang, character, characterId, sex }: Props) 
             {genderText.title}
           </div>
 
-          {/* キャラクター名 */}
-          <div style={{
+          {/* キャラクター名。結果ページの主題なので見出し（h1）にする（検索エンジン・読み上げソフト向け）。
+              見た目は inline style で決めるので、h1 の既定の余白は margin で打ち消す */}
+          <h1 style={{
             fontSize: '30px',
             fontWeight: 900,
             color: '#ffffff',
             lineHeight: 1.2,
-            marginBottom: '10px',
+            margin: '0 0 10px',
           }}>
             {genderText.name}
-          </div>
+          </h1>
 
           {/* 必殺技 */}
           <div style={{

@@ -109,6 +109,11 @@ export const en: Dictionary = {
     lead: 'My cyclist type is',
     cta: "What's yours?",
   },
+  notFound: {
+    title: 'Page not found',
+    body: 'The URL may be wrong, or the page may have moved.',
+    backTop: 'Back to the top and get diagnosed',
+  },
   privacy: {
     metaTitle: 'Privacy Policy — VeloAva',
     title: 'Privacy Policy',

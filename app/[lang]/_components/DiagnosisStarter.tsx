@@ -60,7 +60,7 @@ export default function DiagnosisStarter({ lang }: { lang: Locale }) {
         type="button"
         onClick={() => setPredicted('unknown')}
         aria-pressed={predicted === 'unknown'}
-        className={`text-xs underline underline-offset-2 ${predicted === 'unknown' ? 'text-white' : 'text-white/40 hover:text-white/70'}`}
+        className={`py-1.5 text-xs underline underline-offset-2 ${predicted === 'unknown' ? 'text-white' : 'text-white/40 hover:text-white/70'}`}
       >
         {t.unknown}
       </button>

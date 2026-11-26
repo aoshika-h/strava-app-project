@@ -107,6 +107,11 @@ export const pt: Dictionary = {
     lead: 'Meu tipo de ciclista é',
     cta: 'E o seu, qual é?',
   },
+  notFound: {
+    title: 'Página não encontrada',
+    body: 'O endereço pode estar errado, ou a página pode ter mudado de lugar.',
+    backTop: 'Voltar ao início e fazer o diagnóstico',
+  },
   privacy: {
     metaTitle: 'Política de Privacidade — VeloAva',
     title: 'Política de Privacidade',

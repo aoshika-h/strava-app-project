@@ -11,6 +11,8 @@ import LatestUpdate from './_components/LatestUpdate'
 import { listCharacters } from '@/lib/characters'
 import { getChangelog, type ChangelogEntry } from '@/lib/changelog'
 import { getDictionary, localePath, type Locale } from '@/lib/i18n'
+import { pageAlternates } from '@/lib/seo'
+import type { Metadata } from 'next'
 
 // ページ内だけで使う小さな部品は、別ファイルにせず同じファイルに関数として書いてよい
 function ChangelogList({ entries, formatDate }: { entries: ChangelogEntry[]; formatDate: (ymd: string) => string }) {
@@ -26,6 +28,11 @@ function ChangelogList({ entries, formatDate }: { entries: ChangelogEntry[]; for
   )
 }
 
+// canonical と別言語版（hreflang）。タイトル・説明・OGP は layout.tsx の既定のまま
+export function generateMetadata({ params }: { params: { lang: string } }): Metadata {
+  return { alternates: pageAlternates(params.lang as Locale, '/') }
+}
+
 // ページの部品（page.tsx の default export）は、URL の動的セグメント（[lang]）を params、クエリ（?error=...）を searchParams として受け取れる
 // params.lang は layout.tsx で正しい言語か確かめ済みなので、as Locale で型だけ付けている
 // Strava 認証に失敗すると /api/auth/callback が /?error=access_denied（英語なら /en?error=...）のようにここへ戻す
@@ -34,9 +41,24 @@ export default function HomePage({ params, searchParams }: { params: { lang: str
   const t = getDictionary(lang)
   const changelog = getChangelog(lang)
   const errorMsg = searchParams.error ? t.home.errors[searchParams.error] : null
+  // 構造化データ（JSON-LD）。検索エンジンに「無料のWebアプリ」であることを伝える（検索結果の表示に使われることがある）
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://veloava.vercel.app'
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'VeloAva',
+    url: baseUrl + localePath(lang, '/'),
+    description: t.meta.description,
+    inLanguage: t.htmlLang,
+    applicationCategory: 'SportsApplication',
+    operatingSystem: 'Web',
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'JPY' },
+  }
 
   return (
     <main className="min-h-screen bg-[#0A0A0F] text-white">
+      {/* JSON は自分で組み立てた値だけなので、そのまま埋め込んでよい（< を含む文字列は入らない） */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       {/* ヒーローセクション */}
       <div className="relative overflow-hidden">
         {/* 背景グラデーション */}
@@ -85,7 +107,7 @@ export default function HomePage({ params, searchParams }: { params: { lang: str
               </li>
             ))}
           </ul>
-          <Link href={localePath(lang, '/privacy')} data-ga-event="ui_click" data-ga-id="trust_privacy_link" className="mt-3 inline-block text-xs text-white/40 underline underline-offset-2 hover:text-white/70">
+          <Link href={localePath(lang, '/privacy')} data-ga-event="ui_click" data-ga-id="trust_privacy_link" className="mt-3 inline-block py-1.5 text-xs text-white/40 underline underline-offset-2 hover:text-white/70">
             {t.home.readPrivacy}
           </Link>
         </div>
@@ -112,6 +134,8 @@ export default function HomePage({ params, searchParams }: { params: { lang: str
                   src={`/characters/${c.id}_male.png`}
                   alt={c.typeName}
                   fill
+                  // 表示される幅（スマホは画面の半分、PCはカード1枚の幅）。指定しないと画面幅いっぱいの大きな画像を読み込む
+                  sizes="(min-width: 768px) 280px, 50vw"
                   className="object-cover object-top group-hover:scale-105 transition-transform duration-300"
                 />
               </div>
@@ -162,7 +186,7 @@ export default function HomePage({ params, searchParams }: { params: { lang: str
           )}
         </section>
         <p>{t.home.footerNote}</p>
-        <Link href={localePath(lang, '/privacy')} data-ga-event="ui_click" data-ga-id="privacy_link" className="mt-1 inline-block hover:text-white/40 transition-colors underline underline-offset-2">
+        <Link href={localePath(lang, '/privacy')} data-ga-event="ui_click" data-ga-id="privacy_link" className="mt-1 inline-block py-1.5 hover:text-white/40 transition-colors underline underline-offset-2">
           {t.home.privacy}
         </Link>
       </footer>

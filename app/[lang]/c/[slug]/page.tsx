@@ -7,8 +7,9 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
-import { getSharePageData } from '@/lib/share'
+import { getSharePageData, shareSlug } from '@/lib/share'
 import { getDictionary, localePath, type Locale } from '@/lib/i18n'
+import { pageAlternates } from '@/lib/seo'
 
 interface PageProps {
   params: { slug: string; lang: string }
@@ -26,6 +27,8 @@ export function generateMetadata({ params }: PageProps): Metadata {
   return {
     title,
     description,
+    // canonical はUTMなどを付けない正規のURL（シェアURLのクエリ違いを同じページとして扱ってもらう）
+    alternates: pageAlternates(lang, `/c/${shareSlug(data.characterId, data.sex)}`),
     openGraph: { title, description, type: 'website' },
     twitter: { card: 'summary_large_image', title, description },
   }

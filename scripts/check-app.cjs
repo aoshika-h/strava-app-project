@@ -113,13 +113,20 @@ async function checkPages(browser) {
     const brokenImages = await page.evaluate(() =>
       Array.from(document.images).filter((i) => i.src.includes('/characters/') || i.src.includes('/_next/image')).filter((i) => i.complete && i.naturalWidth === 0).map((i) => i.src),
     )
-    const ok = res.status() === 200 && errors.length === 0 && brokenImages.length === 0
+    // 見出し h1 はページに1つ（検索エンジン・読み上げソフトがページの主題を知るため）。アイコンとテーマ色の指定もあるか
+    const head = await page.evaluate(() => ({
+      h1: document.querySelectorAll('h1').length,
+      icon: !!document.querySelector('link[rel="icon"]'),
+      manifest: !!document.querySelector('link[rel="manifest"]'),
+      theme: document.querySelector('meta[name="theme-color"]')?.getAttribute('content') ?? '',
+    }))
+    const ok = res.status() === 200 && errors.length === 0 && brokenImages.length === 0 && head.h1 === 1 && head.icon && head.manifest && !!head.theme
     if (!ok) {
       bad++
-      check(`ページ ${p}`, false, `status=${res.status()} errors=${errors.join(' / ')} broken=${brokenImages.join(', ')}`)
+      check(`ページ ${p}`, false, `status=${res.status()} errors=${errors.join(' / ')} broken=${brokenImages.join(', ')} head=${JSON.stringify(head)}`)
     }
   }
-  check(`全ページ（${paths.length}件）が 200・エラーなし・画像の読み込み成功`, bad === 0)
+  check(`全ページ（${paths.length}件）が 200・エラーなし・画像の読み込み成功・h1が1つ・アイコンとテーマ色あり`, bad === 0)
   await context.close()
 
   // スマホ幅で横にはみ出さないか（主要ページだけ）
@@ -129,6 +136,15 @@ async function checkPages(browser) {
       await mobile.page.goto(BASE + p, { waitUntil: 'networkidle' })
       const overflow = await mobile.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
       check(`スマホ幅 ${p}: 横にはみ出さない`, overflow <= 1, `はみ出し ${overflow}px`)
+      // タップしやすさ（WCAG 2.2 の目安: 24px 以上）。文中のリンク（display: inline）は対象外
+      const small = await mobile.page.evaluate(() =>
+        Array.from(document.querySelectorAll('a, button'))
+          .filter((e) => getComputedStyle(e).display !== 'inline')
+          .map((e) => ({ t: (e.innerText || e.getAttribute('aria-label') || '').trim().slice(0, 20), r: e.getBoundingClientRect() }))
+          .filter(({ r }) => r.width > 0 && (r.height < 24 || r.width < 24))
+          .map(({ t, r }) => `${t}(${Math.round(r.width)}x${Math.round(r.height)})`),
+      )
+      check(`スマホ幅 ${p}: ボタン・リンクが 24px 以上`, small.length === 0, small.join(', '))
     }
   }
   await mobile.context.close()
@@ -301,6 +317,53 @@ async function checkResult(browser) {
 }
 
 // 6. OGP・サイトマップ・robots
+// いまの Web の定石（アイコン・マニフェスト・セキュリティヘッダー・canonical/hreflang・404・構造化データ）
+async function checkWebBasics(browser) {
+  for (const [file, type] of [['/favicon.ico', 'image/'], ['/icon.svg', 'image/svg'], ['/apple-touch-icon.png', 'image/png'], ['/icon-192.png', 'image/png'], ['/icon-512.png', 'image/png'], ['/manifest.webmanifest', 'manifest']]) {
+    const r = await req(file)
+    check(`${file} が開ける`, r.status === 200 && r.type.includes(type), `${r.status} ${r.type}`)
+  }
+  const manifest = JSON.parse(await (await req('/manifest.webmanifest')).text())
+  check('マニフェスト: 名前・開始URL・192px と 512px のアイコン', manifest.name === 'VeloAva' && manifest.start_url === '/' && ['192x192', '512x512'].every((s) => manifest.icons.some((i) => i.sizes === s)))
+
+  // セキュリティヘッダー（ページ・API・画像のどれにも付く）
+  for (const url of ['/', '/en/c/climber_male', '/api/share/x?c=climber_male', '/og/ja.png']) {
+    const res = await fetch(BASE + url, { redirect: 'manual' })
+    const h = (k) => res.headers.get(k) ?? ''
+    const ok = h('x-content-type-options') === 'nosniff' && h('referrer-policy') === 'strict-origin-when-cross-origin' && h('x-frame-options') === 'DENY' && h('content-security-policy').includes("frame-ancestors 'none'") && h('permissions-policy').includes('camera=()') && !res.headers.has('x-powered-by')
+    check(`セキュリティヘッダー ${url}`, ok, JSON.stringify(Object.fromEntries(res.headers)))
+  }
+
+  // canonical と別言語版（hreflang）がページごとに正しいか
+  const link = (html, rel, extra = '') => html.match(new RegExp(`<link rel="${rel}"${extra} href="([^"]*)"`))?.[1] ?? ''
+  for (const [url, canonical, en] of [
+    ['/', '/', '/en'],
+    ['/pt', '/pt', '/en'],
+    ['/privacy', '/privacy', '/en/privacy'],
+    ['/en/c/climber_female?utm_source=x&utm_campaign=user_share', '/en/c/climber_female', '/en/c/climber_female'],
+  ]) {
+    const html = await (await req(url, { 'user-agent': 'Googlebot' })).text()
+    const c = link(html, 'canonical')
+    const alt = (lang) => html.match(new RegExp(`<link rel="alternate" hrefLang="${lang}" href="([^"]*)"`))?.[1] ?? ''
+    check(`canonical・hreflang ${url}`, (c ? new URL(c).pathname : '') === canonical && !c.includes('utm_') && alt('en').endsWith(en) && alt('pt-BR') !== '' && alt('ja') !== '' && alt('x-default').endsWith(en), `canonical=${c} en=${alt('en')} ja=${alt('ja')} pt=${alt('pt-BR')} x=${alt('x-default')}`)
+  }
+
+  // 構造化データ（トップ）
+  const top = await (await req('/', { 'user-agent': 'Googlebot' })).text()
+  let ld = null
+  try { ld = JSON.parse(top.match(/<script type="application\/ld\+json">([^<]+)<\/script>/)?.[1] ?? '') } catch {}
+  check('トップ: 構造化データ（WebApplication）', ld?.['@type'] === 'WebApplication' && ld.name === 'VeloAva')
+
+  // 404 はサイトのデザイン・言語で出る（Next.js は404をストリーミングで描くので、HTML ではなくブラウザで表示を確かめる）
+  const { context, page } = await newPage(browser, { width: 390, height: 844 })
+  for (const [url, lang, text] of [['/no-such-page', 'ja', 'ページが見つかりません'], ['/en/no-such-page', 'en', 'Page not found'], ['/pt/no/such', 'pt-BR', 'Página não encontrada'], ['/fr', 'ja', 'ページが見つかりません'], ['/c/unknown_male', 'ja', 'ページが見つかりません']]) {
+    const res = await page.goto(BASE + url, { waitUntil: 'networkidle' })
+    const got = await page.evaluate(() => ({ lang: document.documentElement.lang, h1: document.querySelector('h1')?.innerText ?? '', bg: getComputedStyle(document.querySelector('main') ?? document.body).backgroundColor }))
+    check(`404 ${url}: 404・lang="${lang}"・その言語の案内・サイトの背景色`, res.status() === 404 && got.lang === lang && got.h1 === text && got.bg === 'rgb(10, 10, 15)', `${res.status()} ${JSON.stringify(got)}`)
+  }
+  await context.close()
+}
+
 async function checkSeo() {
   const meta = (html, key) => html.match(new RegExp(`<meta (?:property|name)="${key}" content="([^"]*)"`))?.[1] ?? ''
   for (const [url, img] of [['/', '/og/ja.png'], ['/en', '/og/en.png'], ['/pt', '/og/pt.png'], ['/privacy', '/og/ja.png']]) {
@@ -364,6 +427,7 @@ async function isServerUp() {
     console.log('\n## Strava 認証'); await checkAuthStart(); await checkCallback()
     console.log('\n## 結果ページ'); await checkResult(browser)
     console.log('\n## OGP・サイトマップ'); await checkSeo()
+    console.log('\n## Web の基本（アイコン・ヘッダー・canonical・404・構造化データ）'); await checkWebBasics(browser)
   } catch (e) {
     console.error(e)
     failures.push('実行エラー')
