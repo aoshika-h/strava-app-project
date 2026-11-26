@@ -7,6 +7,10 @@ import { shareSlug } from '@/lib/share'
 import { localePath, type Locale } from '@/lib/i18n'
 import ResultView from './_components/ResultView'
 import ResultErrorView from './_components/ResultErrorView'
+import type { Metadata } from 'next'
+
+// 結果ページは個人の診断結果（URLに名前や数値が入る）なので検索エンジンに載せない。サイトマップにも入れていない
+export const metadata: Metadata = { robots: { index: false, follow: false } }
 
 // ResultView は 'use client' の部品（localStorage を使うため）。サーバーで復元・計算した結果を props で渡している。
 // props で渡せるのは JSON にできる値（文字列・数値・配列・オブジェクト）だけ。関数やクラスは渡せない

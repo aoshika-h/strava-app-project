@@ -148,6 +148,13 @@ Strava API Policy 5.3条により、Strava Data（APIで取得した全データ
 
 結果ページの「Xでポスト」ボタンは `/c/{characterId}_{sex}`（英語・ポルトガル語の画面からは `/en/c/...`・`/pt/c/...`）をintent URLで投稿する。`app/[lang]/c/[slug]/opengraph-image.tsx` が `next/og` でキャラ別OGP画像を生成し、Xのタイムラインに画像付きカードを出す。キャラ画像はfsで読むため `next.config.mjs` の `outputFileTracingIncludes` で関数にバンドルしている。日本語フォントはGoogle FontsからNoto Sans JPを必要文字だけ取得する（英語・ポルトガル語の文字も含む）。
 
+### OGP画像・サイトマップ
+
+- サイト全体のOGP画像は言語ごとの静的画像 `public/og/{ja,en,pt}.png`（1200×630）。`app/[lang]/layout.tsx` の `generateMetadata` で `og:image`・`twitter:image` に指定している。キャラ紹介ページ（`/c/...`）は `opengraph-image.tsx` のキャラ別画像が優先される
+- 画像は `node scripts/generate-og.cjs` で作り直す（トップの見出しやキャラ画像を変えたとき）。Strava公認と受け取られないよう、画像にStravaの名前・ロゴは入れない
+- `app/sitemap.ts`（`/sitemap.xml`）にトップ・プライバシー・キャラ紹介ページ12種を3言語ぶん、互いの別言語版（hreflang）として載せる。`app/robots.ts` は `/api/` を巡回対象外にしてサイトマップの場所を伝える
+- 結果ページ（`/result`）は個人の診断結果なので `noindex` にし、サイトマップにも入れない
+
 ### GA4 計測
 
 `NEXT_PUBLIC_GA_ID` が設定されているときだけ送信する（`lib/gtag.ts`）。プレビュー表示（`?preview=` 付きのURLで開いたとき）は `app/[lang]/layout.tsx` で `gtag('config')` を呼ばないので、ページビューもイベントも送られない。
