@@ -156,6 +156,7 @@ async function checkMiddleware() {
     ['/fr', {}, 404, ''],
     ['/c/unknown_male', {}, 404, ''],
     ['/c/climber_other', {}, 404, ''],
+    ['/c/climber_female_x', {}, 404, ''],
   ]
   for (const [url, headers, status, loc, keepQuery] of cases) {
     const r = await req(url, headers)
@@ -285,6 +286,11 @@ async function checkResult(browser) {
   // 中継に知らないキャラを渡したら、X ではなくトップへ
   const bad = await req('/api/share/x?c=unknown_male&lang=en')
   check('Xシェアの中継: 知らないキャラはトップ（/en）へ', bad.status === 307 && new URL(bad.location).pathname === '/en', `${bad.status} ${bad.location}`)
+  // 余計な文字を足した c は受け付けない（UTM の上書きや、シェアURLの書き換えを防ぐ）
+  for (const c of ['climber_female_x', 'climber_female_%3Futm_campaign%3Downer_post%23', 'climber_female%2F..%2F..%2F%2Fevil.com']) {
+    const r = await req(`/api/share/x?c=${c}`)
+    check(`Xシェアの中継: c=${c} はトップへ`, r.status === 307 && new URL(r.location).pathname === '/', `${r.status} ${r.location}`)
+  }
 
   // 壊れた data・data なし
   for (const url of ['/result?data=broken!!', '/result']) {

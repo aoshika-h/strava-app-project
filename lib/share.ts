@@ -20,7 +20,10 @@ export function shareSlug(characterId: CharacterId, sex: Sex): string {
 
 // locale はキャラ名などの表示言語（/en/c/... なら英語の名前）
 export function getSharePageData(slug: string, locale: Locale = 'ja'): SharePageData | null {
-  const [id, sex] = slug.split('_')
+  const parts = slug.split('_')
+  // 「キャラID_性別」のちょうど2つだけを受け付ける（climber_female_x のような余計な部分付きは不正として 404）
+  if (parts.length !== 2) return null
+  const [id, sex] = parts
   // isCharacterId は型ガード。true の後ろでは id が CharacterId 型として扱われる（ただの string ではなくなる）
   if (!isCharacterId(id)) return null
   // URL は誰でも書き換えられるので、知らない値なら null を返して 404 にする

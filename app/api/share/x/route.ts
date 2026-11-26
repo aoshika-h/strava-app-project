@@ -4,7 +4,7 @@
 // 自サイト内のリンクは離脱クリックの対象外なので、いったんここを通す。ここは HTML を返さないので GA のページビューも出ない。
 // 押したことの計測は、これまでどおり結果ページのボタンの share_x イベント（パラメータなし）で行う。
 import { NextRequest, NextResponse } from 'next/server'
-import { getSharePageData } from '@/lib/share'
+import { getSharePageData, shareSlug } from '@/lib/share'
 import { getDictionary, isLocale, localePath, DEFAULT_LOCALE } from '@/lib/i18n'
 
 export function GET(request: NextRequest) {
@@ -18,7 +18,8 @@ export function GET(request: NextRequest) {
   // 投稿文は言語ごとの辞書から（ハッシュタグもその国でよく使われるもの）
   const text = getDictionary(lang).share.postText(data.variant.name, data.variant.title)
   // ユーザーのシェアから来た人を自分の宣伝ポストと分けて数えるため、シェアURLにUTMを付ける（着地時に layout.tsx が share_inflow を送る）
-  const shareUrl = `${origin}${localePath(lang, `/c/${slug}`)}?utm_source=x&utm_medium=social&utm_campaign=user_share`
+  // 入力の c をそのまま使わず、確かめたキャラID・性別から作り直す（余計な文字で UTM を上書きされないように）
+  const shareUrl = `${origin}${localePath(lang, `/c/${shareSlug(data.characterId, data.sex)}`)}?utm_source=x&utm_medium=social&utm_campaign=user_share`
   const intent = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`
   return NextResponse.redirect(intent)
 }
