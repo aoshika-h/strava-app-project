@@ -6,7 +6,7 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { pageAlternates } from '@/lib/seo'
-import { getDictionary, localePath, type Locale } from '@/lib/i18n'
+import { getDictionary, localePath, type Locale, requireLocale } from '@/lib/i18n'
 import PrivacyJa from './_content/ja'
 import PrivacyEn from './_content/en'
 import PrivacyPt from './_content/pt'
@@ -16,12 +16,12 @@ const CONTENT: Record<Locale, () => JSX.Element> = { ja: PrivacyJa, en: PrivacyE
 
 // このページだけの <title>。layout.tsx の generateMetadata を上書きする
 export function generateMetadata({ params }: { params: { lang: string } }): Metadata {
-  const lang = params.lang as Locale
+  const lang = requireLocale(params.lang)
   return { title: getDictionary(lang).privacy.metaTitle, alternates: pageAlternates(lang, '/privacy') }
 }
 
 export default function PrivacyPage({ params }: { params: { lang: string } }) {
-  const lang = params.lang as Locale
+  const lang = requireLocale(params.lang)
   const t = getDictionary(lang).privacy
   const Content = CONTENT[lang] // 大文字で始まる変数に入れると <Content /> として部品のように使える
 
@@ -31,7 +31,7 @@ export default function PrivacyPage({ params }: { params: { lang: string } }) {
 
         {/* ヘッダー */}
         <div className="mb-10">
-          <Link href={localePath(lang, '/')} data-ga-event="ui_click" data-ga-id="privacy_back_top" className="inline-block py-1.5 text-xs text-white/55 hover:text-white/60 transition-colors">{t.backTop}</Link>
+          <Link href={localePath(lang, '/')} data-ga-event="ui_click" data-ga-id="privacy_back_top" className="inline-block py-1.5 text-xs text-white/55 hover:text-white/80 transition-colors">{t.backTop}</Link>
           <h1 className="text-2xl font-black mt-4 mb-1">{t.title}</h1>
           <p className="text-xs text-white/55">{t.updated}</p>
         </div>

@@ -58,7 +58,7 @@ export default function EvolutionCard({ lang, prev, current }: { lang: Locale; p
           {SCORE_KEYS.map((key) => {
             // 5つの能力それぞれで今回−前回を出し、増えたら緑・減ったら赤にする
             const diff = current.scores[key] - prev.scores[key]
-            const color = diff > 0 ? '#34D399' : diff < 0 ? '#F87171' : 'rgba(255,255,255,0.3)'
+            const color = diff > 0 ? '#34D399' : diff < 0 ? '#F87171' : 'rgba(255,255,255,0.55)'
             return (
               <div key={key} className="text-center">
                 <div className="text-xs text-white/55 mb-1">{t.axes[key]}</div>

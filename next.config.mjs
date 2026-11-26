@@ -11,11 +11,12 @@
 // script の 'unsafe-inline' は、Next.js と GA の初期化がページ内のスクリプトを使うため（なくすには nonce 方式への作り替えが要る）
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com",
+  "script-src 'self' 'unsafe-inline' https://*.googletagmanager.com",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://*.google-analytics.com https://*.googletagmanager.com",
+  // GA の Google シグナルが有効だと doubleclick と www.google.com にも送る（国別ドメイン www.google.co.jp などは Report-Only のログで確かめてから足す）
+  "img-src 'self' data: blob: https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.g.doubleclick.net https://www.google.com",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com",
+  "connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.g.doubleclick.net https://www.google.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

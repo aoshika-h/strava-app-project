@@ -10,8 +10,7 @@ import DiagnosisStarter from './_components/DiagnosisStarter'
 import LatestUpdate from './_components/LatestUpdate'
 import { listCharacters } from '@/lib/characters'
 import { getChangelog, type ChangelogEntry } from '@/lib/changelog'
-import { getDictionary, isLocale, localePath, type Locale } from '@/lib/i18n'
-import { notFound } from 'next/navigation'
+import { getDictionary, localePath, type Locale, requireLocale } from '@/lib/i18n'
 import { pageAlternates } from '@/lib/seo'
 import type { Metadata } from 'next'
 
@@ -20,7 +19,7 @@ function ChangelogList({ entries, formatDate }: { entries: ChangelogEntry[]; for
   return (
     <ul className="space-y-2">
       {entries.map((entry) => (
-        <li key={entry.date + entry.text} className="flex gap-3 text-white/55 leading-relaxed">
+        <li key={entry.date + entry.text} className="flex gap-3 text-white/70 leading-relaxed">
           <span className="flex-shrink-0 w-10 text-white/55">{formatDate(entry.date)}</span>
           <span>{entry.text}</span>
         </li>
@@ -31,15 +30,14 @@ function ChangelogList({ entries, formatDate }: { entries: ChangelogEntry[]; for
 
 // canonical と別言語版（hreflang）。タイトル・説明・OGP は layout.tsx の既定のまま
 export function generateMetadata({ params }: { params: { lang: string } }): Metadata {
-  return { alternates: pageAlternates(params.lang as Locale, '/') }
+  return { alternates: pageAlternates(requireLocale(params.lang), '/') }
 }
 
 // ページの部品（page.tsx の default export）は、URL の動的セグメント（[lang]）を params、クエリ（?error=...）を searchParams として受け取れる
 // Strava 認証に失敗すると /api/auth/callback が /?error=access_denied（英語なら /en?error=...）のようにここへ戻す
 export default function HomePage({ params, searchParams }: { params: { lang: string }; searchParams: { error?: string } }) {
-  // 知らない言語（/fr など）は layout でも 404 にするが、ページ側も先に確かめる（確かめないと辞書が見つからずサーバーログにエラーが出る）
-  if (!isLocale(params.lang)) notFound()
-  const lang = params.lang
+  // 知らない言語（/fr など）は 404（lib/i18n の requireLocale の説明を参照）
+  const lang = requireLocale(params.lang)
   const t = getDictionary(lang)
   const changelog = getChangelog(lang)
   const errorMsg = searchParams.error ? t.home.errors[searchParams.error] : null
@@ -178,7 +176,7 @@ export default function HomePage({ params, searchParams }: { params: { lang: str
           <ChangelogList entries={changelog.slice(0, 3)} formatDate={t.formatShortDate} />
           {changelog.length > 3 && (
             <details className="mt-2 group">
-              <summary className="cursor-pointer list-none text-white/55 hover:text-white/60 underline underline-offset-2 group-open:hidden">
+              <summary className="cursor-pointer list-none text-white/55 hover:text-white/80 underline underline-offset-2 group-open:hidden">
                 {t.home.showAll(changelog.length)}
               </summary>
               <div className="mt-2">

@@ -185,6 +185,11 @@ async function checkMiddleware() {
     ['/c/unknown_male', {}, 404, ''],
     ['/c/climber_other', {}, 404, ''],
     ['/c/climber_female_x', {}, 404, ''],
+    // ドットを含む言語部分は middleware を通らないので、ページ側で 404 にしているか（以前はプライバシーが 500 になった）
+    ['/x.y/privacy', {}, 404, ''],
+    ['/x.y/result', {}, 404, ''],
+    ['/x.y/c/climber_male', {}, 404, ''],
+    ['/a.b', {}, 404, ''],
   ]
   for (const [url, headers, status, loc, keepQuery] of cases) {
     const r = await req(url, headers)
@@ -245,7 +250,7 @@ async function checkCallback() {
 async function checkResult(browser) {
   const { context, page, errors } = await newPage(browser, { width: 1280, height: 900 })
   const first = encodeResult(fakeResult('climber', { climbing: 85, speed: 50, endurance: 60, power: 0, consistency: 55 }))
-  const second = encodeResult(fakeResult('granfondo', { climbing: 60, speed: 52, endurance: 88, power: 0, consistency: 58 }))
+  const second = encodeResult(fakeResult('granfondo', { climbing: 60, speed: 50, endurance: 88, power: 0, consistency: 58 }))
 
   // 予想を保存した状態で1回目
   await page.goto(BASE + '/', { waitUntil: 'networkidle' })
@@ -288,6 +293,17 @@ async function checkResult(browser) {
   await page.goto(`${BASE}/result?data=${second}`, { waitUntil: 'networkidle' })
   const body2 = await page.innerText('body')
   check('結果: 2回目は前回との比較（Character Evolution）を表示', /character evolution/i.test(body2))
+  // 前回比較が出ている状態でも、薄すぎる文字がないか（±0 の表示など、プレビューでは出ない部分）
+  const faintEvo = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('body *'))
+      .filter((e) => !e.closest('[data-logo]') && Array.from(e.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim()))
+      .filter((e) => {
+        const m = getComputedStyle(e).color.match(/^rgba\((\d+), (\d+), (\d+), ([\d.]+)\)$/)
+        return m && +m[1] > 200 && +m[2] > 200 && +m[3] > 200 && +m[4] > 0 && +m[4] < 0.5
+      })
+      .map((e) => `${e.textContent.trim().slice(0, 15)}(${getComputedStyle(e).color})`),
+  )
+  check('結果（前回比較あり）: 薄すぎる文字がない', faintEvo.length === 0, faintEvo.join(', '))
   check('結果: 予想がないときは答え合わせを出さない', !body2.includes('意外な一面') && !body2.includes('予想的中'))
 
   // 期間が違う診断（180日）とは比べない。予想が当たったときの表示も確かめる

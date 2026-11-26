@@ -8,7 +8,7 @@ import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { getSharePageData, shareSlug } from '@/lib/share'
-import { getDictionary, localePath, type Locale } from '@/lib/i18n'
+import { getDictionary, localePath, type Locale, requireLocale } from '@/lib/i18n'
 import { pageAlternates } from '@/lib/seo'
 
 interface PageProps {
@@ -18,7 +18,7 @@ interface PageProps {
 // generateMetadata はページごとに中身が変わる <title> や OGP を作るための関数（固定なら export const metadata でよい）。
 // Xのボットはこの <meta> を読んでカードを作るので、キャラ名入りのタイトルにしている
 export function generateMetadata({ params }: PageProps): Metadata {
-  const lang = params.lang as Locale
+  const lang = requireLocale(params.lang)
   const t = getDictionary(lang).sharePage
   const data = getSharePageData(params.slug, lang)
   if (!data) return {}
@@ -35,7 +35,7 @@ export function generateMetadata({ params }: PageProps): Metadata {
 }
 
 export default function SharePage({ params }: PageProps) {
-  const lang = params.lang as Locale
+  const lang = requireLocale(params.lang)
   const t = getDictionary(lang).sharePage
   const data = getSharePageData(params.slug, lang)
   // notFound() を呼ぶとそこで処理が止まり、404 ページが表示される（/c/nope_male のような存在しないキャラ）
