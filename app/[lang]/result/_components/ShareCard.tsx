@@ -17,9 +17,11 @@ interface Props {
   character: Character
   characterId: CharacterId
   sex: Sex
+  // 診断前にユーザーが選んだ予想（ユーザー自身の入力）。あれば投稿文に「予想どおり／予想と違った」を入れる
+  predicted?: CharacterId | null
 }
 
-export default function ShareCard({ lang, character, characterId, sex }: Props) {
+export default function ShareCard({ lang, character, characterId, sex, predicted }: Props) {
   const t = getDictionary(lang).share
   const imageSrc = `/characters/${characterId}_${sex}.png`
   const genderText = getVariant(characterId, sex, lang)
@@ -33,7 +35,7 @@ export default function ShareCard({ lang, character, characterId, sex }: Props) 
   // LINEなどのアプリ内ブラウザは window.open をブロックするため、通常のリンクで投稿画面を開く。
   // リンク先は x.com ではなく自サイトの中継（app/api/share/x/route.ts）。x.com への直接リンクだと、GA4 の「離脱クリック」が
   // リンクのURL（キャラ名・キャラID・性別入り）を自動で記録してしまうため。中継が投稿文とシェアURL（UTM付き）を組み立てて X へ転送する
-  const xShareHref = `/api/share/x?c=${shareSlug(characterId, sex)}&lang=${lang}`
+  const xShareHref = `/api/share/x?c=${shareSlug(characterId, sex)}&lang=${lang}${predicted ? `&p=${predicted}` : ''}`
 
   // 保存・共有ボタンの処理。画像化 → スマホなら共有シート、PCならダウンロード
   const handleSave = async () => {

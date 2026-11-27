@@ -74,7 +74,7 @@ const show = (pushes) => JSON.stringify(pushes.filter((p) => p[0] !== 'js'))
 
 async function run(browser) {
   // 1. どのページでも初期化スクリプトがエラーなく動き、config が呼ばれる
-  for (const url of ['/', '/en', '/pt', '/c/climber_female', '/en/c/climber_female', '/privacy', '/en/privacy']) {
+  for (const url of ['/', '/en', '/pt', '/c', '/pt/c', '/c/climber_female', '/en/c/climber_female', '/privacy', '/en/privacy']) {
     const { page, pushes, errors } = await openPage(browser, url)
     check(`${url}: スクリプトエラーなし`, errors.length === 0, errors.join(' / '))
     check(`${url}: gtag('config') が呼ばれる`, hasConfig(pushes), show(pushes))

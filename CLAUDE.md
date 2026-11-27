@@ -55,7 +55,8 @@ app/
 │   ├── layout.tsx            全ページ共通（<html lang>、GA の初期設定、言語切り替え）
 │   ├── page.tsx              トップ（_components/: DiagnosisStarter, PeriodButtons, LatestUpdate）
 │   ├── result/page.tsx       結果（_components/: ResultView, ShareCard, InsightsCard, EvolutionCard, RadarChart, PredictionReveal, ResultErrorView）
-│   ├── c/[slug]/page.tsx     キャラ紹介ページ（Xのカードの着地点）
+│   ├── c/page.tsx            キャラ図鑑（12キャラの一覧。検索の入口とキャラ紹介ページどうしのリンク）
+│   ├── c/[slug]/page.tsx     キャラ紹介ページ（Xのカードの着地点。下半分はタイプの特徴・ストーリー・ほかのキャラへのリンクで、検索向けの中身）
 │   ├── c/[slug]/opengraph-image.tsx  キャラ別OGP画像
 │   ├── not-found.tsx         404ページ（3言語。言語はブラウザのURLの先頭から。headers() は使わない＝使うと配下が全部動的になる）
 │   ├── [...rest]/page.tsx    どのページにも当てはまらないURLを not-found.tsx へ回す
@@ -164,7 +165,7 @@ Strava API Policy 5.3条により、Strava Data（APIで取得した全データ
 
 - サイト全体のOGP画像は言語ごとの静的画像 `public/og/{ja,en,pt}.png`（1200×630）。`app/[lang]/layout.tsx` の `generateMetadata` で `og:image`・`twitter:image` に指定している。キャラ紹介ページ（`/c/...`）は `opengraph-image.tsx` のキャラ別画像が優先される
 - 画像は `node scripts/generate-og.cjs` で作り直す（トップの見出しやキャラ画像を変えたとき）。Strava公認と受け取られないよう、画像にStravaの名前・ロゴは入れない
-- `app/sitemap.ts`（`/sitemap.xml`）にトップ・プライバシー・キャラ紹介ページ12種を3言語ぶん、互いの別言語版（hreflang）として載せる。`app/robots.ts` は `/api/` を巡回対象外にしてサイトマップの場所を伝える
+- `app/sitemap.ts`（`/sitemap.xml`）にトップ・キャラ図鑑（`/c`）・キャラ紹介ページ12種・プライバシーを3言語ぶん、互いの別言語版（hreflang）として載せる。`app/robots.ts` は `/api/` を巡回対象外にしてサイトマップの場所を伝える
 - 結果ページ（`/result`）は個人の診断結果なので `noindex` にし、サイトマップにも入れない
 - Google Search Console は URLプレフィックス `https://veloava.vercel.app/` で、HTMLファイル `public/googledef27e552d077cc2.html` により所有権を確認している。**このファイルは消さない**（Google が定期的に確認し直し、なくなると確認が外れてサイトマップも読まれなくなる）。`middleware.ts` は拡張子付きのパスを対象外にしているので、言語の振り分けを通らずそのまま返る
 
@@ -191,8 +192,10 @@ Strava認証ではXやLINEのアプリ内ブラウザからStravaアプリ・Saf
 | `share_inflow` | ユーザーのXシェアから `/c/...`（`/en/c/...`・`/pt/c/...` も）に着地したとき（`app/[lang]/layout.tsx` の初期化スクリプトで送る。**GA側でキーイベント＝CVに設定、カウントはセッションに1回**） | なし |
 | `share_card` | 結果ページの保存・共有ボタン | `method` = share / download |
 | `retry_diagnosis` | 結果ページの「もう一度診断する」 | なし |
-| `share_page_cta` | キャラ紹介ページ（`/c/...`）の「あなたも診断する」 | なし |
+| `share_page_cta` | キャラ紹介ページ（`/c/...`）の「あなたも診断する」 | 下のボタンだけ `button_id` = bottom |
 | `ui_click` | その他のリンク | `button_id` |
+
+**投稿文**: `/api/share/x` は `p`（診断前にユーザーが選んだ予想。ユーザー自身の入力）があれば、投稿文に「予想どおり」「予想と違った」を入れる（`share.postTextHit`・`postTextMiss`）。キャラ紹介ページの `<title>` はタイプの説明（検索向け）、`og:title` は「私のサイクリストタイプは〜」（Xのカード向け）と分けている。
 
 **シェアURLのUTM**: 結果ページのXシェアは `/c/{characterId}_{sex}?utm_source=x&utm_medium=social&utm_campaign=user_share` を投稿する。`utm_campaign=user_share` で着地した人だけを `share_inflow`（CV）として数え、実際に投稿されて誰かが見たことの裏付けにする。開発者が自分で宣伝するポストには `utm_campaign=owner_post` を付け、ユーザーのシェアと混ぜない。ファネルは 結果ページ → `share_x` → `share_inflow` → `share_page_cta`。
 

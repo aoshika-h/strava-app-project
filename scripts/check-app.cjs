@@ -102,7 +102,7 @@ async function newPage(browser, viewport) {
 async function checkPages(browser) {
   const paths = []
   for (const l of LANGS) {
-    paths.push(l || '/', `${l}/privacy`)
+    paths.push(l || '/', `${l}/privacy`, `${l}/c`)
     for (const t of TYPES) for (const s of SEXES) paths.push(`${l}/c/${t}_${s}`, `${l}/result?preview=${t}&sex=${s}`)
   }
   const { context, page, errors } = await newPage(browser, { width: 1280, height: 800 })
@@ -289,6 +289,9 @@ async function checkResult(browser) {
   ])
   check('結果: 保存ボタンでPNGをダウンロード（PC）', !!download && /\.png$/.test(download.suggestedFilename()), download?.suggestedFilename() ?? 'ダウンロードなし')
 
+  // 予想を保存して診断したので、シェアボタンのリンクに予想（p）が付く（1回目は sprinter を予想して climber）
+  check('結果: シェアボタンのリンクに予想が付く', (href ?? '').includes('p=sprinter'), href ?? '')
+
   // 2回目（同じ期間で別のキャラ）→ 前回との比較
   await page.goto(`${BASE}/result?data=${second}`, { waitUntil: 'networkidle' })
   const body2 = await page.innerText('body')
@@ -326,6 +329,15 @@ async function checkResult(browser) {
   await page.goto(`${BASE}/en/result?data=${first}`, { waitUntil: 'networkidle' })
   const en = await followShare(await page.getAttribute(X_SHARE, 'href'))
   check('結果（英語）: シェアURLが /en/c/...', en.shareUrl?.pathname === '/en/c/climber_female', String(en.shareUrl))
+
+  // 予想（p、ユーザー自身の入力）があると、投稿文に答え合わせが入る。不正な p は無視して通常の投稿文
+  for (const [p, expect] of [['climber', '予想どおり'], ['sprinter', 'スプリンターだと思ってたのに'], ['evil', 'VeloAvaでサイクリストタイプを診断したら「']]) {
+    const r = await followShare(`/api/share/x?c=climber_female&lang=ja&p=${p}`)
+    const text = r.intent?.searchParams.get('text') ?? ''
+    check(`Xシェアの中継: 予想 p=${p} の投稿文`, text.includes(expect) && text.includes('アルピナ・クロス'), text)
+  }
+  const enMiss = (await followShare('/api/share/x?c=climber_female&lang=en&p=allrounder')).intent?.searchParams.get('text') ?? ''
+  check('Xシェアの中継（英語）: 予想が外れた投稿文', enMiss.includes('the All-Rounder type'), enMiss)
 
   // 中継に知らないキャラを渡したら、X ではなくトップへ
   const bad = await req('/api/share/x?c=unknown_male&lang=en')
@@ -400,6 +412,29 @@ async function checkWebBasics(browser) {
   await context.close()
 }
 
+// キャラ紹介ページ（検索向けの中身）・キャラ図鑑・トップからのリンク
+async function checkCharacterPages(browser) {
+  const { context, page } = await newPage(browser, { width: 1280, height: 900 })
+  await page.goto(`${BASE}/c/climber_female`, { waitUntil: 'networkidle' })
+  const body = await page.innerText('body')
+  const links = await page.$$eval('a[href]', (as) => as.map((a) => a.getAttribute('href')))
+  check('キャラ紹介: タイプの特徴・得意なこと・ストーリーを表示', ['クライマータイプの特徴', '得意なこと', 'ストーリー', 'ヒルクライム'].every((w) => body.includes(w)), body.slice(0, 200))
+  check('キャラ紹介: もう一方の性別のキャラへのリンク', links.includes('/c/climber_male'))
+  check('キャラ紹介: ほかの5タイプ（同じ性別）へのリンク', ['sprinter', 'tt', 'granfondo', 'allrounder', 'weekend'].every((id) => links.includes(`/c/${id}_female`)), links.join(' '))
+  check('キャラ紹介: 図鑑へのリンク', links.includes('/c'))
+  check('キャラ紹介: <title> はタイプの説明、Xのカード（og:title）はシェアした人の言葉', (await page.title()).includes('クライマータイプの特徴') && ((await page.getAttribute('meta[property="og:title"]', 'content')) ?? '').includes('私のサイクリストタイプは'), await page.title())
+
+  await page.goto(`${BASE}/en/c`, { waitUntil: 'networkidle' })
+  const idxLinks = await page.$$eval('a[href]', (as) => as.map((a) => a.getAttribute('href')))
+  const all12 = ['climber', 'sprinter', 'tt', 'granfondo', 'allrounder', 'weekend'].every((id) => idxLinks.includes(`/en/c/${id}_male`) && idxLinks.includes(`/en/c/${id}_female`))
+  check('キャラ図鑑（英語）: 12キャラすべてへのリンク', all12, idxLinks.join(' '))
+
+  await page.goto(`${BASE}/`, { waitUntil: 'networkidle' })
+  const topLinks = await page.$$eval('a[href]', (as) => as.map((a) => a.getAttribute('href')))
+  check('トップ: タイプのカードからキャラ紹介と図鑑へリンク', topLinks.includes('/c/climber_male') && topLinks.includes('/c'), topLinks.join(' '))
+  await context.close()
+}
+
 async function checkSeo() {
   const meta = (html, key) => html.match(new RegExp(`<meta (?:property|name)="${key}" content="([^"]*)"`))?.[1] ?? ''
   for (const [url, img] of [['/', '/og/ja.png'], ['/en', '/og/en.png'], ['/pt', '/og/pt.png'], ['/privacy', '/og/ja.png']]) {
@@ -420,7 +455,7 @@ async function checkSeo() {
 
   const sitemap = await (await req('/sitemap.xml')).text()
   const locs = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1])
-  check('サイトマップ: 42件（3言語 × トップ・プライバシー・キャラ紹介12種）', locs.length === 42, `${locs.length}件`)
+  check('サイトマップ: 45件（3言語 × トップ・キャラ図鑑・キャラ紹介12種・プライバシー）', locs.length === 45, `${locs.length}件`)
   check('サイトマップ: 結果ページを含まない', !locs.some((l) => l.includes('/result')))
   let dead = 0
   for (const l of locs) {
@@ -462,6 +497,7 @@ async function isServerUp() {
     console.log('\n## 言語の振り分け'); await checkMiddleware()
     console.log('\n## Strava 認証'); await checkAuthStart(); await checkCallback()
     console.log('\n## 結果ページ'); await checkResult(browser)
+    console.log('\n## キャラ紹介・図鑑'); await checkCharacterPages(browser)
     console.log('\n## OGP・サイトマップ'); await checkSeo()
     console.log('\n## Web の基本（アイコン・ヘッダー・canonical・404・構造化データ）'); await checkWebBasics(browser)
   } catch (e) {

@@ -95,17 +95,39 @@ export const ja = {
     shareTitle: 'VeloAva キャラクター診断',
     postText: (name: string, title: string) =>
       `VeloAvaでサイクリストタイプを診断したら「${name}」（${title}）だった！\nあなたは何タイプ？\n#VeloAva #ロードバイク`,
+    // 予想と結果の答え合わせ入りの投稿文（予想はユーザー自身の入力）。当たり・外れで話のネタになるように
+    postTextHit: (name: string, title: string) =>
+      `VeloAvaでサイクリストタイプを診断したら、予想どおり「${name}」（${title}）だった！\nあなたは何タイプ？\n#VeloAva #ロードバイク`,
+    postTextMiss: (predicted: string, name: string, title: string) =>
+      `自分は${predicted}だと思ってたのに、VeloAvaで診断したら「${name}」（${title}）だった…！\nあなたは何タイプ？\n#VeloAva #ロードバイク`,
   },
   sharePage: {
     metaTitle: (name: string) => `私のサイクリストタイプは「${name}」 — VeloAva`,
     metaDescription: 'Stravaのライドデータから、あなたのサイクリストタイプを6種類のキャラクターで診断します。',
     cta: 'あなたも診断する →',
     note: 'Stravaと連携して30秒で診断',
+    // 検索結果に出るタイトル（X のカードは metaTitle のまま「私のサイクリストタイプは〜」）
+    seoTitle: (name: string, title: string, typeName: string) => `${name}（${title}）｜${typeName}タイプの特徴 — VeloAva サイクリスト診断`,
+    featuresTitle: (typeName: string) => `${typeName}タイプの特徴`,
+    strengthsTitle: '得意なこと',
+    loreTitle: 'ストーリー',
+    otherVariantTitle: (sexLabel: string) => `${sexLabel}のキャラクター`,
+    sexLabel: { male: '男性版', female: '女性版' } as Record<string, string>,
+    otherTypesTitle: 'ほかのタイプ',
+    indexLink: '全12キャラクターを見る →',
+    trustTitle: '安心して試せる理由',
   },
   og: {
     alt: 'VeloAva サイクリストキャラクター診断',
     lead: '私のサイクリストタイプは',
     cta: 'あなたは何タイプ？',
+  },
+  typesIndex: {
+    metaTitle: 'サイクリストタイプ図鑑（全12キャラ）— VeloAva',
+    metaDescription: 'クライマー、スプリンター、タイムトライアリスト、グランフォンド、オールラウンダー、サンデーライダー。Stravaのライドデータで診断できる6タイプ・男女12キャラクターの特徴を紹介します。',
+    title: 'サイクリストタイプ図鑑',
+    lead: '6タイプ × 男女で12キャラクター。あなたはどれ？',
+    cta: '自分のタイプを診断する →',
   },
   notFound: {
     title: 'ページが見つかりません',

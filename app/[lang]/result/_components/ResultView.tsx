@@ -76,6 +76,7 @@ export default function ResultView({
           character={character}
           characterId={result.characterId}
           sex={result.sex}
+          predicted={predicted}
         />
 
         {/* ライドの数値から組み立てた一言コメント（本人だけに表示） */}

@@ -23,6 +23,19 @@ export interface ChangelogEntry {
 
 const SOURCE: ChangelogSource[] = [
   {
+    date: '2026-11-27',
+    headline: {
+      ja: '12キャラの図鑑ページができました。シェアの投稿文に、予想の答え合わせも入ります',
+      en: 'New guide to all 12 characters, and your share post now says whether your guess was right',
+      pt: 'Novo guia com os 12 personagens, e o post de compartilhamento agora conta se você acertou o palpite',
+    },
+    text: {
+      ja: '6タイプ・男女12キャラの特徴やストーリーをまとめた図鑑ページを追加しました。診断前にタイプを予想した人は、Xでポストするときの投稿文に「予想どおり」「予想と違った」が入ります',
+      en: 'Added a guide page with the traits and stories of all 6 types and 12 characters. If you guessed your type before the diagnosis, your X post now says whether you got it right',
+      pt: 'Adicionamos um guia com as características e histórias dos 6 tipos e 12 personagens. Se você deu um palpite antes do diagnóstico, o post no X agora conta se acertou',
+    },
+  },
+  {
     date: '2026-11-21',
     headline: {
       ja: 'ローラーを非公開にしている方も、チェックひとつで診断に含められます',

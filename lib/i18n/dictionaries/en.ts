@@ -97,17 +97,37 @@ export const en: Dictionary = {
     shareTitle: 'VeloAva cyclist character',
     postText: (name: string, title: string) =>
       `VeloAva says my cyclist type is "${name}" (${title})!\nWhat's yours?\n#VeloAva #cycling #roadcycling`,
+    postTextHit: (name: string, title: string) =>
+      `VeloAva says my cyclist type is "${name}" (${title}) — exactly what I guessed!\nWhat's yours?\n#VeloAva #cycling #roadcycling`,
+    postTextMiss: (predicted: string, name: string, title: string) =>
+      `I was sure I'd be the ${predicted} type, but VeloAva says I'm "${name}" (${title})…!\nWhat's yours?\n#VeloAva #cycling #roadcycling`,
   },
   sharePage: {
     metaTitle: (name: string) => `My cyclist type is "${name}" — VeloAva`,
     metaDescription: 'Find out which of 6 cyclist characters matches your Strava rides.',
     cta: 'Find your type →',
     note: 'Connect Strava — results in 30 seconds',
+    seoTitle: (name: string, title: string, typeName: string) => `${name} (${title}) | ${typeName} type traits — VeloAva cyclist quiz`,
+    featuresTitle: (typeName: string) => `What makes a ${typeName}`,
+    strengthsTitle: 'Strengths',
+    loreTitle: 'Story',
+    otherVariantTitle: (sexLabel: string) => `The ${sexLabel} character`,
+    sexLabel: { male: 'male', female: 'female' } as Record<string, string>,
+    otherTypesTitle: 'Other types',
+    indexLink: 'See all 12 characters →',
+    trustTitle: 'Why it\'s safe to try',
   },
   og: {
     alt: 'VeloAva — Cyclist character diagnosis',
     lead: 'My cyclist type is',
     cta: "What's yours?",
+  },
+  typesIndex: {
+    metaTitle: 'Cyclist type guide (all 12 characters) — VeloAva',
+    metaDescription: 'Climber, Sprinter, Time Trialist, Gran Fondo, All-Rounder, Sunday Rider. Meet the 6 types and 12 characters you can get from your Strava rides.',
+    title: 'Cyclist type guide',
+    lead: '6 types × male and female: 12 characters. Which one are you?',
+    cta: 'Find out your type →',
   },
   notFound: {
     title: 'Page not found',

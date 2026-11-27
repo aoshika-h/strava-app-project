@@ -1,5 +1,5 @@
 // サイトマップ（/sitemap.xml）。Next.js の決まりで app/sitemap.ts が自動で XML になる
-// 載せるのは検索に出てほしい公開ページだけ: トップ、プライバシー、キャラ紹介ページ（6タイプ×男女）。
+// 載せるのは検索に出てほしい公開ページだけ: トップ、キャラ図鑑（/c）、キャラ紹介ページ（6タイプ×男女）、プライバシー。
 // 結果ページ（/result?data=...）は個人の診断結果なので載せない（ページ側でも noindex にしている）。
 // 各ページは日本語（言語なし）・英語（/en）・ポルトガル語（/pt）の3つを、互いの別言語版として登録する（hreflang）
 // middleware.ts は拡張子付きのパスを対象外にしているので、/sitemap.xml は言語の振り分けを通らない
@@ -26,6 +26,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     ...entries('/', 1),
     ...CHARACTER_IDS.flatMap((id) => (['male', 'female'] as const).flatMap((sex) => entries(`/c/${shareSlug(id, sex)}`, 0.6))),
+    ...entries('/c', 0.7),
     ...entries('/privacy', 0.2),
   ]
 }

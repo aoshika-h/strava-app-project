@@ -120,9 +120,13 @@ export default function HomePage({ params, searchParams }: { params: { lang: str
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {listCharacters(lang).map((c) => (
-            <div
+            // 各タイプのキャラ紹介ページへ（検索エンジンがキャラ紹介ページを見つけやすくなる）
+            <Link
               key={c.id}
-              className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:bg-white/8 transition-colors group"
+              href={localePath(lang, `/c/${c.id}_male`)}
+              data-ga-event="ui_click"
+              data-ga-id="top_type_card"
+              className="block bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:bg-white/8 transition-colors group"
             >
               {/* 顔部分のクロップ表示 */}
               <div className="relative h-36 overflow-hidden">
@@ -144,8 +148,13 @@ export default function HomePage({ params, searchParams }: { params: { lang: str
                 <div className="font-bold text-sm">{c.typeName}</div>
                 <div className="text-xs mt-0.5" style={{ color: c.accentColor }}>{c.tagline}</div>
               </div>
-            </div>
+            </Link>
           ))}
+        </div>
+        <div className="text-center mt-6">
+          <Link href={localePath(lang, '/c')} data-ga-event="ui_click" data-ga-id="top_types_index" className="inline-block py-1.5 text-sm text-white/70 underline underline-offset-2 hover:text-white">
+            {t.sharePage.indexLink}
+          </Link>
         </div>
       </div>
 

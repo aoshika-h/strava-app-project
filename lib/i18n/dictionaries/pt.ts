@@ -95,17 +95,37 @@ export const pt: Dictionary = {
     shareTitle: 'VeloAva — personagem ciclista',
     postText: (name: string, title: string) =>
       `O VeloAva disse que meu tipo de ciclista é "${name}" (${title})!\nE o seu, qual é?\n#VeloAva #ciclismo #pedal`,
+    postTextHit: (name: string, title: string) =>
+      `O VeloAva disse que meu tipo de ciclista é "${name}" (${title}) — bem como eu imaginava!\nE o seu, qual é?\n#VeloAva #ciclismo #pedal`,
+    postTextMiss: (predicted: string, name: string, title: string) =>
+      `Eu jurava que era ${predicted}, mas o VeloAva disse que sou "${name}" (${title})…!\nE o seu, qual é?\n#VeloAva #ciclismo #pedal`,
   },
   sharePage: {
     metaTitle: (name: string) => `Meu tipo de ciclista é "${name}" — VeloAva`,
     metaDescription: 'Descubra qual dos 6 personagens ciclistas combina com seus pedais no Strava.',
     cta: 'Descubra o seu →',
     note: 'Conecte o Strava — resultado em 30 segundos',
+    seoTitle: (name: string, title: string, typeName: string) => `${name} (${title}) | Perfil ${typeName} — VeloAva, diagnóstico de ciclista`,
+    featuresTitle: (typeName: string) => `Como é o perfil ${typeName}`,
+    strengthsTitle: 'Pontos fortes',
+    loreTitle: 'História',
+    otherVariantTitle: (sexLabel: string) => `A versão ${sexLabel}`,
+    sexLabel: { male: 'masculina', female: 'feminina' } as Record<string, string>,
+    otherTypesTitle: 'Outros tipos',
+    indexLink: 'Ver os 12 personagens →',
+    trustTitle: 'Por que é seguro testar',
   },
   og: {
     alt: 'VeloAva — Diagnóstico de personagem ciclista',
     lead: 'Meu tipo de ciclista é',
     cta: 'E o seu, qual é?',
+  },
+  typesIndex: {
+    metaTitle: 'Guia de tipos de ciclista (12 personagens) — VeloAva',
+    metaDescription: 'Escalador, Velocista, Contrarrelogista, Gran Fondo, Completo, Ciclista de Domingo. Conheça os 6 tipos e 12 personagens que você pode tirar com seus pedais do Strava.',
+    title: 'Guia de tipos de ciclista',
+    lead: '6 tipos × versões masculina e feminina: 12 personagens. Qual é você?',
+    cta: 'Descobrir meu tipo →',
   },
   notFound: {
     title: 'Página não encontrada',
