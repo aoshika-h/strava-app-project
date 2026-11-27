@@ -264,6 +264,13 @@ async function checkResult(browser) {
   check('結果: スクリプトエラーなし', errors.length === 0, errors.join(' / '))
   check('結果: 一言コメント（Ride Insights）を表示', /ride insights/i.test(body1))
   check('結果: レーダーチャートを表示', (await page.locator('svg polygon').count()) >= 2)
+  // 並び: シェアカード → 能力チャート → 一言コメント（「なぜこのタイプか」をすぐ見せる）
+  const order = await page.evaluate(() => {
+    const top = (t) => Array.from(document.querySelectorAll('h2')).find((h) => h.textContent.trim().toLowerCase() === t)?.getBoundingClientRect().top ?? -1
+    const card = document.querySelector('h1')?.getBoundingClientRect().top ?? -1
+    return { card, chart: top('ability chart'), insights: top('ride insights') }
+  })
+  check('結果: 並びがシェアカード → 能力チャート → 一言コメント', order.card >= 0 && order.card < order.chart && order.chart < order.insights, JSON.stringify(order))
   check('結果: 予想の答え合わせを表示（外れ）', body1.includes('意外な一面'))
   check('結果: 予想は一度だけ（表示後に消える）', (await page.evaluate(() => localStorage.getItem('veloava_prediction'))) === null)
   check('結果: 前回がないときは前回比較を出さない', !/character evolution/i.test(body1))

@@ -100,7 +100,7 @@ export const en: Dictionary = {
     postTextHit: (name: string, title: string) =>
       `VeloAva says my cyclist type is "${name}" (${title}) — exactly what I guessed!\nWhat's yours?\n#VeloAva #cycling #roadcycling`,
     postTextMiss: (predicted: string, name: string, title: string) =>
-      `I was sure I'd be the ${predicted} type, but VeloAva says I'm "${name}" (${title})…!\nWhat's yours?\n#VeloAva #cycling #roadcycling`,
+      `I was sure I'd be the ${predicted} type, but VeloAva says I'm "${name}" (${title})!\nWhat's yours?\n#VeloAva #cycling #roadcycling`,
   },
   sharePage: {
     metaTitle: (name: string) => `My cyclist type is "${name}" — VeloAva`,
@@ -108,7 +108,7 @@ export const en: Dictionary = {
     cta: 'Find your type →',
     note: 'Connect Strava — results in 30 seconds',
     seoTitle: (name: string, title: string, typeName: string) => `${name} (${title}) | ${typeName} type traits — VeloAva cyclist quiz`,
-    featuresTitle: (typeName: string) => `What makes a ${typeName}`,
+    featuresTitle: (typeName: string) => `${typeName} type: key traits`,
     strengthsTitle: 'Strengths',
     loreTitle: 'Story',
     otherVariantTitle: (sexLabel: string) => `The ${sexLabel} character`,

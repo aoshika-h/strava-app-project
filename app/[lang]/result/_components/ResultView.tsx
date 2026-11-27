@@ -79,6 +79,36 @@ export default function ResultView({
           predicted={predicted}
         />
 
+        {/* 能力チャート（シェアカードのすぐ下。「なぜこのタイプか」がすぐ分かるように）。左がレーダーチャート、右が数値のバー（バーの幅を style の width: % で指定） */}
+        <div>
+          <h2 className="text-sm font-bold text-white/55 tracking-widest uppercase mb-3">Ability Chart</h2>
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+            <div className="md:flex items-center gap-6">
+              <div className="flex-shrink-0 mb-4 md:mb-0">
+                <RadarChart lang={lang} scores={scores} color={character.accentColor} />
+              </div>
+              <div className="flex-1 space-y-3">
+                {SCORE_KEYS.map((key) => (
+                  <div key={key}>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-white/60">{t.axes[key]}</span>
+                      <span className="font-bold" style={{ color: character.accentColor }}>
+                        {scores[key]}
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${scores[key]}%`, backgroundColor: character.accentColor }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* ライドの数値から組み立てた一言コメント（本人だけに表示） */}
         <InsightsCard insights={insights} accentColor={character.accentColor} />
 
@@ -111,36 +141,6 @@ export default function ResultView({
                 <div className="text-xs text-white/55 mt-0.5">{item.label}</div>
               </div>
             ))}
-          </div>
-        </div>
-
-        {/* 能力チャート。左がレーダーチャート、右が数値のバー（バーの幅を style の width: % で指定） */}
-        <div>
-          <h2 className="text-sm font-bold text-white/55 tracking-widest uppercase mb-3">Ability Chart</h2>
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-            <div className="md:flex items-center gap-6">
-              <div className="flex-shrink-0 mb-4 md:mb-0">
-                <RadarChart lang={lang} scores={scores} color={character.accentColor} />
-              </div>
-              <div className="flex-1 space-y-3">
-                {SCORE_KEYS.map((key) => (
-                  <div key={key}>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-white/60">{t.axes[key]}</span>
-                      <span className="font-bold" style={{ color: character.accentColor }}>
-                        {scores[key]}
-                      </span>
-                    </div>
-                    <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full"
-                        style={{ width: `${scores[key]}%`, backgroundColor: character.accentColor }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
 

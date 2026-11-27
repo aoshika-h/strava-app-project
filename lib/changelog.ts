@@ -25,9 +25,9 @@ const SOURCE: ChangelogSource[] = [
   {
     date: '2026-11-27',
     headline: {
-      ja: '12キャラの図鑑ページができました。シェアの投稿文に、予想の答え合わせも入ります',
-      en: 'New guide to all 12 characters, and your share post now says whether your guess was right',
-      pt: 'Novo guia com os 12 personagens, e o post de compartilhamento agora conta se você acertou o palpite',
+      ja: '12キャラ図鑑ができました。投稿文に予想の答え合わせも',
+      en: 'New 12-character guide, plus guess results in your posts',
+      pt: 'Novo guia dos 12 personagens e palpite no seu post',
     },
     text: {
       ja: '6タイプ・男女12キャラの特徴やストーリーをまとめた図鑑ページを追加しました。診断前にタイプを予想した人は、Xでポストするときの投稿文に「予想どおり」「予想と違った」が入ります',

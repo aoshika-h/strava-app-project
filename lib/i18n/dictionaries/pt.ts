@@ -98,7 +98,7 @@ export const pt: Dictionary = {
     postTextHit: (name: string, title: string) =>
       `O VeloAva disse que meu tipo de ciclista é "${name}" (${title}) — bem como eu imaginava!\nE o seu, qual é?\n#VeloAva #ciclismo #pedal`,
     postTextMiss: (predicted: string, name: string, title: string) =>
-      `Eu jurava que era ${predicted}, mas o VeloAva disse que sou "${name}" (${title})…!\nE o seu, qual é?\n#VeloAva #ciclismo #pedal`,
+      `Eu jurava que era do tipo ${predicted}, mas o VeloAva disse que sou "${name}" (${title})!\nE o seu, qual é?\n#VeloAva #ciclismo #pedal`,
   },
   sharePage: {
     metaTitle: (name: string) => `Meu tipo de ciclista é "${name}" — VeloAva`,
