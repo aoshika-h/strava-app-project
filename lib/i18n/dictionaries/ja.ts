@@ -9,14 +9,16 @@ export const ja = {
   numberLocale: 'ja-JP', // 数値の書式（toLocaleString に渡す。ポルトガル語なら 1.234,5 のようになる）
   meta: {
     // 検索向け: 日本のロード乗りは自分の走りのタイプを「脚質」と呼ぶので、タイトルと説明に入れている
-    title: 'VeloAva — Stravaで脚質診断｜あなたのサイクリストキャラクターは？',
+    title: 'VeloAva — 脚質診断｜Stravaのライドでわかるあなたのサイクリストタイプ',
+    // X・LINE などのカード用の見出し（検索向けの title とは分け、キャッチコピー寄りにする。「Stravaで〜」から始めると公式機能に見えやすいため）
+    ogTitle: 'VeloAva — あなたのサイクリストキャラクターを診断',
     description: 'Stravaのライドデータから、あなたの脚質（クライマー・スプリンター・TTなど6タイプ）を無料で診断。走りのタイプをキャラクターで表示します。',
   },
   home: {
     badge: 'Stravaデータ分析',
     titleLine1: 'あなたのサイクリスト',
     titleLine2: 'キャラクターを診断',
-    lead: 'Stravaのライドデータから、あなたの脚質（走りのタイプ）を6種類のキャラクターで診断します。獲得標高・速度・距離・乗る頻度・パワーをもとに判定。',
+    lead: 'Stravaのライドデータから、あなたの脚質（走りのタイプ）を6種類のキャラクターで診断します。登坂の多さ・速度・1回の距離・乗る頻度・パワーをもとに判定。',
     errors: {
       access_denied: 'Stravaの連携を拒否されました。もう一度試してください。',
       no_code: '認証コードが取得できませんでした。もう一度試してください。',
@@ -108,7 +110,7 @@ export const ja = {
     cta: 'あなたも診断する →',
     note: 'Stravaと連携して30秒で診断',
     // 検索結果に出るタイトル（X のカードは metaTitle のまま「私のサイクリストタイプは〜」）
-    seoTitle: (name: string, title: string, typeName: string) => `${name}（${title}）｜脚質「${typeName}」タイプの特徴 — VeloAva 脚質診断`,
+    seoTitle: (name: string, title: string, typeName: string) => `${name}（${title}）｜${typeName}タイプの特徴 — VeloAva 脚質診断`,
     featuresTitle: (typeName: string) => `${typeName}タイプの特徴`,
     strengthsTitle: '得意なこと',
     loreTitle: 'ストーリー',
@@ -125,7 +127,7 @@ export const ja = {
   },
   typesIndex: {
     metaTitle: '脚質タイプ図鑑（全12キャラ）— VeloAva 脚質診断',
-    metaDescription: 'ロードバイクの脚質、クライマー・スプリンター・タイムトライアリスト・グランフォンド・オールラウンダー・サンデーライダー。Stravaのライドデータで診断できる6タイプ・男女12キャラクターの特徴を紹介します。',
+    metaDescription: 'ロードバイクの脚質（クライマー・スプリンター・タイムトライアリスト・グランフォンド・オールラウンダー・サンデーライダー）を、6タイプ・男女12キャラクターで紹介します。Stravaのライドデータで自分のタイプを診断できます。',
     title: '脚質タイプ図鑑',
     lead: '6タイプ × 男女で12キャラクター。あなたはどれ？',
     cta: '自分のタイプを診断する →',

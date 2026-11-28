@@ -10,6 +10,7 @@ export const pt: Dictionary = {
   numberLocale: 'pt-BR',
   meta: {
     title: 'VeloAva — Descubra seu personagem ciclista',
+    ogTitle: 'VeloAva — Descubra seu personagem ciclista',
     description: 'O VeloAva analisa seus pedais no Strava e revela o seu avatar ciclista',
   },
   home: {

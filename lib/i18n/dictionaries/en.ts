@@ -11,8 +11,9 @@ export const en: Dictionary = {
   langName: 'English',
   numberLocale: 'en-US',
   meta: {
-    title: 'VeloAva — What type of rider are you? A cycling quiz from your Strava rides',
-    description: 'Find your cycling rider type — climber, sprinter, time trialist and more — from your Strava rides, for free. Your riding style becomes one of 12 characters.',
+    title: 'VeloAva — What type of cyclist are you? Strava rider type quiz',
+    ogTitle: 'VeloAva — Discover your cyclist character',
+    description: 'A free quiz that finds your rider type — climber, sprinter, time trialist and more — from your Strava rides. 6 types, 12 characters.',
   },
   home: {
     badge: 'Strava ride analysis',
