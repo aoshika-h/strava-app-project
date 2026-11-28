@@ -404,6 +404,11 @@ async function checkWebBasics(browser) {
   let ld = null
   try { ld = JSON.parse(top.match(/<script type="application\/ld\+json">([^<]+)<\/script>/)?.[1] ?? '') } catch {}
   check('トップ: 構造化データ（WebApplication）', ld?.['@type'] === 'WebApplication' && ld.name === 'VeloAva')
+  // 日本のロード乗りが検索に使う言葉「脚質」が、トップ・キャラ紹介・図鑑のタイトルに入っているか
+  for (const url of ['/', '/c', '/c/climber_male']) {
+    const html = await (await req(url, { 'user-agent': 'Googlebot' })).text()
+    check(`検索の言葉: ${url} の <title> に「脚質」`, (html.match(/<title>([^<]*)<\/title>/)?.[1] ?? '').includes('脚質'), html.match(/<title>([^<]*)<\/title>/)?.[1])
+  }
 
   // プライバシーページはビルド時に静的に作られ、CDN でキャッシュされる（404 などで動的な値を使うと壊れる）
   const privacy = await fetch(BASE + '/en/privacy')
@@ -429,7 +434,7 @@ async function checkCharacterPages(browser) {
   check('キャラ紹介: もう一方の性別のキャラへのリンク', links.includes('/c/climber_male'))
   check('キャラ紹介: ほかの5タイプ（同じ性別）へのリンク', ['sprinter', 'tt', 'granfondo', 'allrounder', 'weekend'].every((id) => links.includes(`/c/${id}_female`)), links.join(' '))
   check('キャラ紹介: 図鑑へのリンク', links.includes('/c'))
-  check('キャラ紹介: <title> はタイプの説明、Xのカード（og:title）はシェアした人の言葉', (await page.title()).includes('クライマータイプの特徴') && ((await page.getAttribute('meta[property="og:title"]', 'content')) ?? '').includes('私のサイクリストタイプは'), await page.title())
+  check('キャラ紹介: <title> はタイプの説明、Xのカード（og:title）はシェアした人の言葉', (await page.title()).includes('脚質「クライマー」タイプの特徴') && ((await page.getAttribute('meta[property="og:title"]', 'content')) ?? '').includes('私のサイクリストタイプは'), await page.title())
 
   await page.goto(`${BASE}/en/c`, { waitUntil: 'networkidle' })
   const idxLinks = await page.$$eval('a[href]', (as) => as.map((a) => a.getAttribute('href')))

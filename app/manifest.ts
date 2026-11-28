@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'VeloAva',
     short_name: 'VeloAva',
-    description: 'Strava のライドデータから、あなたのサイクリストキャラクターを診断します',
+    description: 'Strava のライドデータから、あなたの脚質をキャラクターで診断します',
     start_url: '/',
     display: 'standalone',
     background_color: '#0A0A0F',

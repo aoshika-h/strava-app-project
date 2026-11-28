@@ -11,8 +11,8 @@ export const en: Dictionary = {
   langName: 'English',
   numberLocale: 'en-US',
   meta: {
-    title: 'VeloAva — Discover your cyclist character',
-    description: 'VeloAva analyzes your Strava rides and reveals your cyclist avatar',
+    title: 'VeloAva — What type of rider are you? A cycling quiz from your Strava rides',
+    description: 'Find your cycling rider type — climber, sprinter, time trialist and more — from your Strava rides, for free. Your riding style becomes one of 12 characters.',
   },
   home: {
     badge: 'Strava ride analysis',

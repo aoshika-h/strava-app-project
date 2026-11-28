@@ -8,14 +8,15 @@ export const ja = {
   langName: '日本語',
   numberLocale: 'ja-JP', // 数値の書式（toLocaleString に渡す。ポルトガル語なら 1.234,5 のようになる）
   meta: {
-    title: 'VeloAva — あなたのサイクリストキャラクターを診断',
-    description: 'Stravaのライドデータを分析して、あなたのサイクリストアバターを診断します',
+    // 検索向け: 日本のロード乗りは自分の走りのタイプを「脚質」と呼ぶので、タイトルと説明に入れている
+    title: 'VeloAva — Stravaで脚質診断｜あなたのサイクリストキャラクターは？',
+    description: 'Stravaのライドデータから、あなたの脚質（クライマー・スプリンター・TTなど6タイプ）を無料で診断。走りのタイプをキャラクターで表示します。',
   },
   home: {
     badge: 'Stravaデータ分析',
     titleLine1: 'あなたのサイクリスト',
     titleLine2: 'キャラクターを診断',
-    lead: 'Stravaのライドデータを分析して、あなたの走りのタイプを6種類のキャラクターから診断します。FTP・脚質・頻度・獲得標高をもとに判定。',
+    lead: 'Stravaのライドデータから、あなたの脚質（走りのタイプ）を6種類のキャラクターで診断します。獲得標高・速度・距離・乗る頻度・パワーをもとに判定。',
     errors: {
       access_denied: 'Stravaの連携を拒否されました。もう一度試してください。',
       no_code: '認証コードが取得できませんでした。もう一度試してください。',
@@ -28,7 +29,7 @@ export const ja = {
       '読み取りのみ。投稿・変更は一切しません。「自分のみ」にしている非公開アクティビティは、チェックを入れたときだけ読みます',
     ],
     readPrivacy: 'プライバシーポリシーを読む',
-    typesTitle: '6種類のサイクリストタイプ',
+    typesTitle: '6種類の脚質タイプ',
     howTitle: '診断の仕組み',
     how: [
       { title: 'Stravaと連携', desc: 'ワンクリックでStravaアカウントを連携。安全なOAuth認証を使用します。' },
@@ -103,11 +104,11 @@ export const ja = {
   },
   sharePage: {
     metaTitle: (name: string) => `私のサイクリストタイプは「${name}」 — VeloAva`,
-    metaDescription: 'Stravaのライドデータから、あなたのサイクリストタイプを6種類のキャラクターで診断します。',
+    metaDescription: 'Stravaのライドデータから、あなたの脚質を6種類のキャラクターで診断します。',
     cta: 'あなたも診断する →',
     note: 'Stravaと連携して30秒で診断',
     // 検索結果に出るタイトル（X のカードは metaTitle のまま「私のサイクリストタイプは〜」）
-    seoTitle: (name: string, title: string, typeName: string) => `${name}（${title}）｜${typeName}タイプの特徴 — VeloAva サイクリスト診断`,
+    seoTitle: (name: string, title: string, typeName: string) => `${name}（${title}）｜脚質「${typeName}」タイプの特徴 — VeloAva 脚質診断`,
     featuresTitle: (typeName: string) => `${typeName}タイプの特徴`,
     strengthsTitle: '得意なこと',
     loreTitle: 'ストーリー',
@@ -123,9 +124,9 @@ export const ja = {
     cta: 'あなたは何タイプ？',
   },
   typesIndex: {
-    metaTitle: 'サイクリストタイプ図鑑（全12キャラ）— VeloAva',
-    metaDescription: 'クライマー、スプリンター、タイムトライアリスト、グランフォンド、オールラウンダー、サンデーライダー。Stravaのライドデータで診断できる6タイプ・男女12キャラクターの特徴を紹介します。',
-    title: 'サイクリストタイプ図鑑',
+    metaTitle: '脚質タイプ図鑑（全12キャラ）— VeloAva 脚質診断',
+    metaDescription: 'ロードバイクの脚質、クライマー・スプリンター・タイムトライアリスト・グランフォンド・オールラウンダー・サンデーライダー。Stravaのライドデータで診断できる6タイプ・男女12キャラクターの特徴を紹介します。',
+    title: '脚質タイプ図鑑',
     lead: '6タイプ × 男女で12キャラクター。あなたはどれ？',
     cta: '自分のタイプを診断する →',
   },

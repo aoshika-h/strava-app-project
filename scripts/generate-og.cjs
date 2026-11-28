@@ -15,7 +15,7 @@ const CHAR_DIR = path.join(ROOT, 'public', 'characters')
 const OUT_DIR = path.join(ROOT, 'public', 'og')
 
 const TEXT = {
-  ja: { title: 'あなたのサイクリストキャラクターを診断', sub: '6タイプ × 男女 12キャラ' },
+  ja: { title: 'あなたのサイクリストキャラクターを診断', sub: '脚質6タイプ × 男女12キャラ' },
   en: { title: 'Discover your cyclist character', sub: '6 types · 12 characters' },
   pt: { title: 'Descubra seu personagem ciclista', sub: '6 tipos · 12 personagens' },
 }
